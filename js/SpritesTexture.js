@@ -53,9 +53,9 @@ function SpritesTexture(gl, size, spacing) {
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE)
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE)
 
-  while (GL.textures.length === 0) GL.textures.push(null)
-  this.textureId = GL.textures.length
-  GL.textures.push(this.texture)
+  while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
+  this.textureId = ModuleGL.textures.length
+  ModuleGL.textures.push(this.texture)
 }
 
 SpritesTexture.prototype.tryPack = function (sprites) {

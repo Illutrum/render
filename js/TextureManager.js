@@ -87,12 +87,12 @@ TextureManager.prototype.loadTexture = function (texture) {
     console.error('LOADED TEX IMAGE', name, textureId)
     let tex
     if (textureId === -1) {
-      tex = gl.createTexture()
-      while (GL.textures.length === 0) GL.textures.push(null)
-      textureId = GL.textures.length
-      GL.textures[textureId] = tex
+      tex = this.gl.createTexture()
+      while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
+      textureId = ModuleGL.textures.length
+      ModuleGL.textures[textureId] = tex
     } else {
-      tex = GL.textures[textureId]
+      tex = ModuleGL.textures[textureId]
     }
     const glCtx = this.gl
     glCtx.bindTexture(glCtx.TEXTURE_2D, tex)
@@ -165,9 +165,9 @@ TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData,
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.LINEAR_MIPMAP_LINEAR)
   glCtx.generateMipmap(glCtx.TEXTURE_2D)
 
-  while (GL.textures.length === 0) GL.textures.push(null)
-  const textureId = GL.textures.length
-  GL.textures.push(texture)
+  while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
+  const textureId = ModuleGL.textures.length
+  ModuleGL.textures.push(texture)
 
   console.debug('LOADED SPRITES FONT TEXTURE', textureId)
   for (let i = 0, l = data.chars.length; i < l; i++) {
@@ -188,7 +188,7 @@ TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData,
     this.loadingSprites.delete(spriteName)
     this.loadedSprites.set(spriteName, loaded)
     console.log('SPR', spriteName, 'ENG', this.engine)
-    const cppSpriteName = Module.allocate(Module.intArrayFromString(spriteName), 'i8', ALLOC_NORMAL)
+    const cppSpriteName = Module.allocate(Module.intArrayFromString(spriteName), 0)
     if (!loaded.sprite) loaded.sprite = Module._fgfx_getSprite(cppSpriteName)
     Module._free(cppSpriteName)
     Module._fgfx_Sprite_setTextureFragment(
@@ -241,9 +241,9 @@ TextureManager.prototype.loadPackedSprites = function (sprites, imageUrl) {
       glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.LINEAR_MIPMAP_LINEAR)
       glCtx.generateMipmap(glCtx.TEXTURE_2D)
 
-      while (GL.textures.length === 0) GL.textures.push(null)
-      const textureId = GL.textures.length
-      GL.textures.push(texture)
+      while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
+      const textureId = ModuleGL.textures.length
+      ModuleGL.textures.push(texture)
       console.debug('LOADED SPRITES TEXTURE', textureId)
       for (const k in sprites) {
         console.debug('SPRITE LOADED', k)

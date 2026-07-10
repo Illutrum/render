@@ -31,11 +31,11 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
   get_filename_component(EXAMPLE_NAME ${EXAMPLE_FILE} NAME_WE)
   add_executable(${EXAMPLE_NAME} ${EXAMPLE_FILE} ${FSXX_SOURCES} ${SOURCE_FILES})
   target_include_directories(${EXAMPLE_NAME} PRIVATE include src)
-  set_target_properties(${EXAMPLE_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/examples
-  )
   # Non-Emscripten builds need desktop OpenGL, libpng, GLFW, GLEW
   if(NOT EMSCRIPTEN)
+    set_target_properties(${EXAMPLE_NAME} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/examples
+    )
     target_link_libraries(${EXAMPLE_NAME} PRIVATE
       GL
       png
@@ -43,9 +43,25 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
       glfw
       GLEW)
   else()
-    # Export Emscripten JS runtime methods (comma-separated, no spaces — same as in Emscripten tests).
-    # _free is C/Wasm, use EXPORTED_FUNCTIONS if needed; do not list it here.
+    set(EXAMPLE_OUT_DIR ${CMAKE_BINARY_DIR}/examples/${EXAMPLE_NAME})
+    set_target_properties(${EXAMPLE_NAME} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${EXAMPLE_OUT_DIR}
+    )
     target_link_options(${EXAMPLE_NAME} PRIVATE
-      "-sEXPORTED_RUNTIME_METHODS=UTF8ToString,allocate,intArrayFromString")
+      "-sEXPORTED_RUNTIME_METHODS=UTF8ToString,allocate,intArrayFromString"
+      "-sEXPORTED_FUNCTIONS=_main,_malloc,_free"
+      "--post-js=${CMAKE_CURRENT_SOURCE_DIR}/js/emscripten-glue.js"
+    )
+    add_custom_command(TARGET ${EXAMPLE_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples/${EXAMPLE_NAME}.html
+        ${EXAMPLE_OUT_DIR}/index.html
+      COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/runtime-js-compiled.js
+        ${EXAMPLE_OUT_DIR}/runtime-js-compiled.js
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples/assets
+        ${EXAMPLE_OUT_DIR}/assets
+    )
   endif()
 endforeach()
