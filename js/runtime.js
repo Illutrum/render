@@ -32,6 +32,8 @@ window.fgfxLoader = window.fgfxLoader ?? {
   loadTextureImage: loadImage,
   loadFontData: (name) => loadText(`${name}.fnt`),
   loadFontImage: (name) => loadImage(`${name}.png`),
+  loadMSDFFontData: (name) => loadText(`${name}.fnt`),
+  loadMSDFFontImage: (name) => loadImage(`${name}.png`),
   loadText: (name) => loadText(name),
   loadBinary: (name) => loadBinary(name)
 }

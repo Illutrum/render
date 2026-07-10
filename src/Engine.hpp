@@ -2,9 +2,11 @@
 #define ENGINE_H
 
 #include "SpriteFont.hpp"
+#include "MSDFFont.hpp"
 #include "Sprite.hpp"
 #include "Texture.hpp"
 #include "SpriteLayer.hpp"
+#include "MSDFLayer.hpp"
 #include "PolygonLayer.hpp"
 #include "LineLayer.hpp"
 #include "TexturedLayer.hpp"
@@ -30,11 +32,13 @@ namespace fgfx {
   protected:
     std::map<std::string, std::shared_ptr<Sprite>> sprites;
     std::map<std::string, std::shared_ptr<SpriteFont>> spriteFonts;
+    std::map<std::string, std::shared_ptr<MSDFFont>> msdfFonts;
     std::map<std::string, std::shared_ptr<Texture>> textures;
 
 #ifdef EMSCRIPTEN
     std::vector<std::shared_ptr<Sprite>> spritesToLoad;
     std::vector<std::shared_ptr<SpriteFont>> spriteFontsToLoad;
+    std::vector<std::shared_ptr<MSDFFont>> msdfFontsToLoad;
     std::vector<std::shared_ptr<Texture>> texturesToLoad;
 #endif
 
@@ -48,6 +52,7 @@ namespace fgfx {
 
     friend class Sprite;
     friend class SpriteFont;
+    friend class MSDFFont;
 
     std::function<void(double,float)> renderFunction;
 
@@ -67,6 +72,7 @@ namespace fgfx {
     std::shared_ptr<Sprite> getSprite(std::string spriteName);
     std::shared_ptr<Sprite> getEmptySprite(std::string spriteName);
     std::shared_ptr<SpriteFont> getSpriteFont(std::string spriteFontName);
+    std::shared_ptr<MSDFFont> getMSDFFont(std::string msdfFontName);
     std::shared_ptr<Texture> getTexture(std::string texture);
     std::shared_ptr<Texture> createEmptyTexture(int width, int height, GLint internalFormat, GLenum format, GLenum type);
 
@@ -77,6 +83,9 @@ namespace fgfx {
     int getSpriteFontsToLoadCount();
     std::shared_ptr<SpriteFont> getSpriteFontToLoad(int n);
     void clearSpriteFontsToLoad();
+    int getMSDFFontsToLoadCount();
+    std::shared_ptr<MSDFFont> getMSDFFontToLoad(int n);
+    void clearMSDFFontsToLoad();
     int getTexturesToLoadCount();
     std::shared_ptr<Texture> getTextureToLoad(int n);
     void clearTexturesToLoad();
@@ -90,6 +99,7 @@ namespace fgfx {
     void uploadTextures();
 
     std::shared_ptr<SpriteLayer> createSpriteLayer();
+    std::shared_ptr<MSDFLayer> createMSDFLayer();
     std::shared_ptr<PolygonLayer> createPolygonLayer();
     std::shared_ptr<LineLayer> createLineLayer();
     std::shared_ptr<TexturedLayer> createTexturedLayer();

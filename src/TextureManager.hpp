@@ -5,6 +5,7 @@
 
 #include "SpritesTexture.hpp"
 #include "SpriteFont.hpp"
+#include "MSDFFont.hpp"
 #include "Texture.hpp"
 
 #include <map>
@@ -26,6 +27,7 @@ namespace fgfx {
 
     void loadSprite(std::shared_ptr<Sprite> sprite, std::shared_ptr<Image> image);
     void loadSpriteFont(std::shared_ptr<SpriteFont> sprite, std::shared_ptr<Image> image, std::string& data);
+    void loadMSDFFont(std::shared_ptr<MSDFFont> font, std::shared_ptr<Image> image, std::string& data);
     void loadTexture(std::shared_ptr<Texture> texture, std::shared_ptr<Image> image);
 
     void clean();

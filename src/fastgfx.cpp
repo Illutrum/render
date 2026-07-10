@@ -194,6 +194,47 @@ void fgfx_SpriteFont_setCharacter(fgfx::SpriteFont* font, unsigned short charact
   font -> setCharacter(character,sprite->shared_from_this(),glm::vec2(xSize,ySize),glm::vec2(xOffset,yOffset),advance);
 }
 
+FGFX_API
+int fgfx_getMSDFFontsToLoadCount() {
+  return fgfx::engine->getMSDFFontsToLoadCount();
+}
+
+FGFX_API
+fgfx::MSDFFont* fgfx_getMSDFFontToLoad(int id) {
+  return fgfx::engine->getMSDFFontToLoad(id).get();
+}
+
+FGFX_API
+void fgfx_clearMSDFFontsToLoad(int id) {
+  fgfx::engine->clearMSDFFontsToLoad();
+}
+
+FGFX_API
+const char* fgfx_MSDFFont_getName(fgfx::MSDFFont* font) {
+  return font->name.c_str();
+}
+
+FGFX_API
+void fgfx_MSDFFont_setHeight(fgfx::MSDFFont* font, float linep, float basep) {
+  font->setHeight(linep, basep);
+}
+
+FGFX_API
+void fgfx_MSDFFont_setPxRange(fgfx::MSDFFont* font, float range) {
+  font->setPxRange(range);
+}
+
+FGFX_API
+void fgfx_MSDFFont_setCharacter(fgfx::MSDFFont* font, unsigned short character, fgfx::Sprite* sprite,
+                                float xSize, float ySize, float xOffset, float yOffset, float advance) {
+  font->setCharacter(character, sprite->shared_from_this(), glm::vec2(xSize, ySize), glm::vec2(xOffset, yOffset), advance);
+}
+
+FGFX_API
+void fgfx_MSDFFont_finishLoad(fgfx::MSDFFont* font) {
+  font->loadPromise->resolve(font->shared_from_this());
+}
+
 
 FGFX_API
 int fgfx_getTexturesToLoadCount() {

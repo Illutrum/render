@@ -22,6 +22,7 @@ namespace fgfx {
   class Sprite;
   class PolygonLayer;
   class SpriteFont;
+  class MSDFFont;
   class Texture;
   class TexturedLayer;
   class TextureTransitionLayer;
@@ -48,6 +49,8 @@ namespace fgfx {
 #include "../src/Layer.hpp"
 #include "../src/PolygonLayer.hpp"
 #include "../src/SpriteFont.hpp"
+#include "../src/MSDFFont.hpp"
+#include "../src/MSDFLayer.hpp"
 #include "../src/Texture.hpp"
 #include "../src/FrameBuffer.hpp"
 

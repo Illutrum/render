@@ -42,6 +42,11 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
       z
       glfw
       GLEW)
+    add_custom_command(TARGET ${EXAMPLE_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/examples/assets
+        ${CMAKE_BINARY_DIR}/examples/assets
+    )
   else()
     set(EXAMPLE_OUT_DIR ${CMAKE_BINARY_DIR}/examples/${EXAMPLE_NAME})
     set_target_properties(${EXAMPLE_NAME} PROPERTIES

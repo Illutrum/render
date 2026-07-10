@@ -1,5 +1,6 @@
 #include "Engine.hpp"
 #include "PolygonLayer.hpp"
+#include "MSDFLayer.hpp"
 #include "config.hpp"
 #include "fastgfx.hpp"
 #include <chrono>
@@ -11,6 +12,7 @@ namespace fgfx {
 
   Engine::Engine() {
     SpriteLayer::initializeSpriteProgram();
+    MSDFLayer::initializeMSDFProgram();
     LineLayer::initializeLineProgram();
     PolygonLayer::initializePolygonProgram();
     TexturedLayer::initializeTexturedProgram();
@@ -26,6 +28,7 @@ namespace fgfx {
 
   Engine::~Engine() {
     SpriteLayer::destroySpriteProgram();
+    MSDFLayer::destroyMSDFProgram();
     LineLayer::destroyLineProgram();
     PolygonLayer::destroyPolygonProgram();
     TexturedLayer::destroyTexturedProgram();
@@ -147,6 +150,35 @@ namespace fgfx {
     return spriteFont;
   }
 
+  std::shared_ptr<MSDFFont> Engine::getMSDFFont(std::string msdfFontName) {
+    auto it = msdfFonts.find(msdfFontName);
+    if (it != msdfFonts.end()) return it->second;
+    std::shared_ptr<MSDFFont> msdfFont = std::make_shared<MSDFFont>(msdfFontName);
+    msdfFont->loadPromise = std::make_shared<serialization::promise<std::shared_ptr<MSDFFont>>>();
+#ifdef EMSCRIPTEN
+    msdfFontsToLoad.push_back(msdfFont);
+#else
+    auto pngp = loadPng(msdfFontName + ".png");
+    auto datap = fsxx::loadFile(msdfFontName + ".fnt");
+    pngp->on_resolved([this, msdfFont, datap](std::shared_ptr<Image> image) {
+      datap->on_resolved([this, msdfFont, image](std::string data) {
+        textureManager.loadMSDFFont(msdfFont, image, data);
+        fgfx::engine->uploadQueue.enqueue([=] {
+          msdfFont->loadPromise->resolve(msdfFont);
+        });
+      });
+    });
+    pngp->on_rejected([msdfFont](std::exception_ptr error) {
+      msdfFont->loadPromise->reject(error);
+    });
+    datap->on_rejected([msdfFont](std::exception_ptr error) {
+      msdfFont->loadPromise->reject(error);
+    });
+#endif
+    msdfFonts[msdfFontName] = msdfFont;
+    return msdfFont;
+  }
+
 #ifdef EMSCRIPTEN
   int Engine::getSpritesToLoadCount() {
     return spritesToLoad.size();
@@ -165,6 +197,15 @@ namespace fgfx {
   }
   void Engine::clearSpriteFontsToLoad() {
     spriteFontsToLoad.clear();
+  }
+  int Engine::getMSDFFontsToLoadCount() {
+    return msdfFontsToLoad.size();
+  }
+  std::shared_ptr<MSDFFont> Engine::getMSDFFontToLoad(int n) {
+    return msdfFontsToLoad[n];
+  }
+  void Engine::clearMSDFFontsToLoad() {
+    msdfFontsToLoad.clear();
   }
   int Engine::getTexturesToLoadCount() {
     return texturesToLoad.size();
@@ -204,6 +245,9 @@ namespace fgfx {
 
   std::shared_ptr<SpriteLayer> Engine::createSpriteLayer() {
     return std::make_shared<SpriteLayer>(this);
+  }
+  std::shared_ptr<MSDFLayer> Engine::createMSDFLayer() {
+    return std::make_shared<MSDFLayer>(this);
   }
   std::shared_ptr<PolygonLayer> Engine::createPolygonLayer() {
     return std::make_shared<PolygonLayer>(this);

@@ -1,0 +1,8 @@
+{
+  "name": "fgfx-msdf-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "msdf-bmfont-xml": "^2.7.0"
+  }
+}

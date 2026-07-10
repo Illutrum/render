@@ -68,6 +68,35 @@ namespace fgfx {
     os << value ;
     return os.str() ;
   }
+
+  static float parseXmlAttr(const std::string& tag, const char* name) {
+    std::string key = std::string(name) + "=\"";
+    size_t pos = tag.find(key);
+    if (pos == std::string::npos) return 0;
+    pos += key.size();
+    size_t end = tag.find('"', pos);
+    if (end == std::string::npos) return 0;
+    return static_cast<float>(atof(tag.substr(pos, end - pos).c_str()));
+  }
+
+  static int parseXmlAttrInt(const std::string& tag, const char* name) {
+    return static_cast<int>(parseXmlAttr(tag, name));
+  }
+
+  static void uploadMSDFFontGlyph(std::shared_ptr<MSDFFont> font, std::shared_ptr<Image> image, GLuint texture,
+                                  unsigned short character, int x, int y, int width, int height,
+                                  int xoffset, int yoffset, int xadvance) {
+    std::string spriteName = "msdf_" + font->name + "_" + to_string(character);
+    std::shared_ptr<Sprite> sprite = engine->getEmptySprite(spriteName);
+    sprite->setTextureFragment(texture,
+                               1.0f * (x + 0.5f) / image->width,
+                               1.0f * (y + 0.5f) / image->height,
+                               1.0f * (x + width + 0.5f) / image->width,
+                               1.0f * (y + height + 0.5f) / image->height,
+                               width, height, true);
+    font->setCharacter(character, sprite, glm::vec2(width, height), glm::vec2(xoffset, yoffset), xadvance);
+  }
+
   void uploadSpriteFont(std::shared_ptr<SpriteFont> font, std::shared_ptr<Image> image, std::string data) {
     GLuint texture;
     glGenTextures(1, &texture);
@@ -140,6 +169,100 @@ namespace fgfx {
       uploadSpriteFont(spriteFont, image, data);
     });
   }
+
+  void uploadMSDFFont(std::shared_ptr<MSDFFont> font, std::shared_ptr<Image> image, std::string data) {
+    GLuint texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+
+    float pxRange = 4.0f;
+    const bool isXml = data.find("<font") != std::string::npos || data.find("<?xml") != std::string::npos;
+
+    if (isXml) {
+      size_t dfPos = data.find("<distanceField");
+      if (dfPos != std::string::npos) {
+        size_t dfEnd = data.find("/>", dfPos);
+        if (dfEnd != std::string::npos) {
+          std::string dfTag = data.substr(dfPos, dfEnd - dfPos + 2);
+          float range = parseXmlAttr(dfTag, "distanceRange");
+          if (range > 0) pxRange = range;
+        }
+      }
+      size_t commonPos = data.find("<common");
+      if (commonPos != std::string::npos) {
+        size_t commonEnd = data.find("/>", commonPos);
+        if (commonEnd != std::string::npos) {
+          std::string commonTag = data.substr(commonPos, commonEnd - commonPos + 2);
+          font->lineHeight = parseXmlAttr(commonTag, "lineHeight");
+          font->baseLine = parseXmlAttr(commonTag, "base");
+          font->scale.x = parseXmlAttr(commonTag, "scaleW");
+          font->scale.y = parseXmlAttr(commonTag, "scaleH");
+        }
+      }
+      size_t pos = 0;
+      while ((pos = data.find("<char ", pos)) != std::string::npos) {
+        size_t end = data.find("/>", pos);
+        if (end == std::string::npos) break;
+        std::string charTag = data.substr(pos, end - pos + 2);
+        uploadMSDFFontGlyph(font, image, texture,
+                            static_cast<unsigned short>(parseXmlAttrInt(charTag, "id")),
+                            parseXmlAttrInt(charTag, "x"),
+                            parseXmlAttrInt(charTag, "y"),
+                            parseXmlAttrInt(charTag, "width"),
+                            parseXmlAttrInt(charTag, "height"),
+                            parseXmlAttrInt(charTag, "xoffset"),
+                            parseXmlAttrInt(charTag, "yoffset"),
+                            parseXmlAttrInt(charTag, "xadvance"));
+        pos = end + 2;
+      }
+    } else {
+      std::istringstream in(data);
+      std::string line;
+      while (std::getline(in, line)) {
+        std::istringstream lineIn(line);
+        std::string command;
+        std::string key;
+        std::string value;
+        lineIn >> command;
+        if (command == "common") {
+          while (readAttrib(lineIn, key, value)) {
+            if (key == "lineHeight") font->lineHeight = atof(value.c_str());
+            else if (key == "base") font->baseLine = atof(value.c_str());
+            else if (key == "scaleW") font->scale.x = atof(value.c_str());
+            else if (key == "scaleH") font->scale.y = atof(value.c_str());
+          }
+        } else if (command == "char") {
+          unsigned short character;
+          int x, y, width, height, xoffset, yoffset, xadvance;
+          while (readAttrib(lineIn, key, value)) {
+            if (key == "id") character = atoi(value.c_str());
+            else if (key == "x") x = atoi(value.c_str());
+            else if (key == "y") y = atoi(value.c_str());
+            else if (key == "width") width = atoi(value.c_str());
+            else if (key == "height") height = atoi(value.c_str());
+            else if (key == "xoffset") xoffset = atoi(value.c_str());
+            else if (key == "yoffset") yoffset = atoi(value.c_str());
+            else if (key == "xadvance") xadvance = atoi(value.c_str());
+          }
+          uploadMSDFFontGlyph(font, image, texture, character, x, y, width, height, xoffset, yoffset, xadvance);
+        }
+      }
+    }
+    font->setPxRange(pxRange);
+  }
+
+  void TextureManager::loadMSDFFont(std::shared_ptr<MSDFFont> msdfFont, std::shared_ptr<Image> image, std::string& data) {
+    if (msdfFont->name.size() == 0) throw ImageNotFoundError();
+    fgfx::engine->uploadQueue.enqueue([=] {
+      uploadMSDFFont(msdfFont, image, data);
+    });
+  }
+
   void TextureManager::loadTexture(std::shared_ptr<Texture> texture, std::shared_ptr<Image> image) {
     if(texture->name.size() == 0 ) throw ImageNotFoundError();
     fgfx::engine->uploadQueue.enqueue([=]{
