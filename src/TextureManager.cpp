@@ -5,6 +5,7 @@
 
 #include "TextureManager.hpp"
 #include "Image.hpp"
+#include "BmFontParse.hpp"
 #include <fastgfx.hpp>
 #include <algorithm>
 #include <functional>
@@ -67,20 +68,6 @@ namespace fgfx {
     std::ostringstream os ;
     os << value ;
     return os.str() ;
-  }
-
-  static float parseXmlAttr(const std::string& tag, const char* name) {
-    std::string key = std::string(name) + "=\"";
-    size_t pos = tag.find(key);
-    if (pos == std::string::npos) return 0;
-    pos += key.size();
-    size_t end = tag.find('"', pos);
-    if (end == std::string::npos) return 0;
-    return static_cast<float>(atof(tag.substr(pos, end - pos).c_str()));
-  }
-
-  static int parseXmlAttrInt(const std::string& tag, const char* name) {
-    return static_cast<int>(parseXmlAttr(tag, name));
   }
 
   static void uploadMSDFFontGlyph(std::shared_ptr<MSDFFont> font, std::shared_ptr<Image> image, GLuint texture,

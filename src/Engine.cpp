@@ -4,7 +4,7 @@
 #include "config.hpp"
 #include "fastgfx.hpp"
 #include <chrono>
-#include <fsxx.hpp>
+#include <io/FileLoader.hpp>
 
 namespace fgfx {
 
@@ -130,7 +130,7 @@ namespace fgfx {
     spriteFontsToLoad.push_back(spriteFont);
 #else
     auto pngp = loadPng(spriteFontName + ".png");
-    auto datap = fsxx::loadFile(spriteFontName + ".fnt");
+    auto datap = fgfx::io::loadFile(spriteFontName + ".fnt");
     pngp->on_resolved([this, spriteFont, datap](std::shared_ptr<Image> image) {
       datap->on_resolved([this, spriteFont, image](std::string data){
         textureManager.loadSpriteFont(spriteFont, image, data);
@@ -159,7 +159,7 @@ namespace fgfx {
     msdfFontsToLoad.push_back(msdfFont);
 #else
     auto pngp = loadPng(msdfFontName + ".png");
-    auto datap = fsxx::loadFile(msdfFontName + ".fnt");
+    auto datap = fgfx::io::loadFile(msdfFontName + ".fnt");
     pngp->on_resolved([this, msdfFont, datap](std::shared_ptr<Image> image) {
       datap->on_resolved([this, msdfFont, image](std::string data) {
         textureManager.loadMSDFFont(msdfFont, image, data);

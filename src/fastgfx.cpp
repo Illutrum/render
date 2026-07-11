@@ -8,6 +8,7 @@
 #include <memory>
 #include <fastgfx.hpp>
 #include "config.hpp"
+#include <io/FileLoader.hpp>
 
 #ifndef EMSCRIPTEN
 #include <thread>
@@ -43,12 +44,14 @@ namespace fgfx {
 #ifndef EMSCRIPTEN
     finished = true;
     if(loaderThread.joinable()) loaderThread.join();
+    fgfx::io::destroy();
 #endif
   }
 
   void init() {
 #ifndef EMSCRIPTEN
     finished = false;
+    fgfx::io::init();
 #endif
 #ifdef EMSCRIPTEN
     EM_ASM(Module.initializeFastGfxRuntime());

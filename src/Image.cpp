@@ -8,7 +8,7 @@
 #include "fastgfx.hpp"
 #include "Image.hpp"
 #include <algorithm>
-#include <fsxx.hpp>
+#include <io/FileLoader.hpp>
 #include <png.h>
 
 namespace fgfx {
@@ -168,7 +168,7 @@ namespace fgfx {
   }
 
   std::shared_ptr<serialization::promise<std::shared_ptr<Image>>> loadPng(std::string path) {
-    return fsxx::loadFile(path)->then<std::shared_ptr<Image>>([](std::string data) -> std::shared_ptr<Image>{
+    return fgfx::io::loadFile(path)->then<std::shared_ptr<Image>>([](std::string data) -> std::shared_ptr<Image>{
       return decodePngImage(data);
     });
   }

@@ -27,6 +27,8 @@ namespace fgfx {
   GLuint loadShader ( GLenum type, std::string shaderSrc);
   GLuint createProgram( GLuint vertexShader, GLuint fragmentShader);
 
+  void stripGlesQualifiers(std::string& shaderSrc);
+
 }
 
 

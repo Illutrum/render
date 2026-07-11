@@ -28,14 +28,18 @@ namespace fgfx {
     return there;
   }
 
-  GLuint loadShader(GLenum type, std::string shaderSrc) {
-#ifdef __USE_OPENGL
+  void stripGlesQualifiers(std::string& shaderSrc) {
     replaceAll(shaderSrc, "precision highp float;", "                       ");
     replaceAll(shaderSrc, "precision mediump float;", "                       ");
     replaceAll(shaderSrc, "precision lowp float;", "                    ");
     replaceAll(shaderSrc, "highp ", "      ");
     replaceAll(shaderSrc, "mediump ", "        ");
     replaceAll(shaderSrc, "lowp ", "     ");
+  }
+
+  GLuint loadShader(GLenum type, std::string shaderSrc) {
+#ifdef __USE_OPENGL
+    stripGlesQualifiers(shaderSrc);
 #endif
     GLuint shader;
     GLint compiled;

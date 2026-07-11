@@ -10,28 +10,23 @@ include_directories(${CMAKE_SOURCE_DIR}/cpp-rpc/src)
 
 set(SRC_ROOT ./)
 aux_source_directory(${SRC_ROOT}src SRC_LIST)
+list(APPEND SRC_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/io/FileLoader.cpp)
 set(SOURCE_FILES ${SRC_LIST})
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -stdlib=libc++ -O3 -Os")
 
-set(FSXX_ROOT ${CMAKE_SOURCE_DIR}/game-dev/fsxx)
-include_directories(${FSXX_ROOT}/include)
-aux_source_directory(${FSXX_ROOT}/src FSXX_SOURCES)
-
-if(NOT EMSCRIPTEN) 
+if(NOT EMSCRIPTEN)
   add_definitions(-D__USE_OPENGL)
   add_library(fgfx STATIC ${SOURCE_FILES})
 endif()
-
 
 file(GLOB EXAMPLE_FILES "examples/*.cpp")
 
 foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
   get_filename_component(EXAMPLE_NAME ${EXAMPLE_FILE} NAME_WE)
-  add_executable(${EXAMPLE_NAME} ${EXAMPLE_FILE} ${FSXX_SOURCES} ${SOURCE_FILES})
+  add_executable(${EXAMPLE_NAME} ${EXAMPLE_FILE} ${SOURCE_FILES})
   target_include_directories(${EXAMPLE_NAME} PRIVATE include src)
-  # Non-Emscripten builds need desktop OpenGL, libpng, GLFW, GLEW
   if(NOT EMSCRIPTEN)
     set_target_properties(${EXAMPLE_NAME} PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/examples
@@ -54,7 +49,7 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
     )
     target_link_options(${EXAMPLE_NAME} PRIVATE
       "-sEXPORTED_RUNTIME_METHODS=UTF8ToString,allocate,intArrayFromString"
-      "-sEXPORTED_FUNCTIONS=_main,_malloc,_free"
+      "-sEXPORTED_FUNCTIONS=_main,_malloc,_free,_fgfx_io_fileLoaded,_fgfx_io_fileFailed"
       "--post-js=${CMAKE_CURRENT_SOURCE_DIR}/js/emscripten-glue.js"
     )
     add_custom_command(TARGET ${EXAMPLE_NAME} POST_BUILD
@@ -70,3 +65,23 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
     )
   endif()
 endforeach()
+
+if(NOT EMSCRIPTEN)
+  add_executable(test_fgfx
+    tests/test_fgfx.cpp
+    tests/test_file_io.cpp
+    tests/test_shaders.cpp
+    tests/test_bmfont_parse.cpp
+    tests/test_png.cpp
+  )
+  target_include_directories(test_fgfx PRIVATE include src)
+  target_compile_definitions(test_fgfx PRIVATE
+    __USE_OPENGL
+    FGFX_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  target_link_libraries(test_fgfx PRIVATE fgfx png z GL GLEW doctest::doctest)
+  set_target_properties(test_fgfx PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/examples
+  )
+  add_test(NAME FGFXTests COMMAND $<TARGET_FILE:test_fgfx>)
+endif()

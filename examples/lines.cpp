@@ -2,7 +2,6 @@
 // Created by Michał Łaszczewski on 09/07/16.
 //
 #include <fastgfx.hpp>
-#include <fsxx.hpp>
 #include <vector>
 #include <cstdlib>
 
@@ -12,7 +11,6 @@ std::vector<std::pair<glm::vec2, glm::vec2>> points;
 #define POINTS_SPEED 2.3f
 
 int main() {
-  fsxx::init();
   fgfx::init();
 
   points.resize(POINTS_COUNT);

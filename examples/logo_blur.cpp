@@ -2,12 +2,10 @@
 // Created by Michał Łaszczewski on 09/07/16.
 //
 #include <fastgfx.hpp>
-#include <fsxx.hpp>
 
 #define PI 3.141592
 
 int main() {
-  fsxx::init();
   fgfx::init();
 
   auto logoSprite = fgfx::engine->getSprite("assets/logo.png");

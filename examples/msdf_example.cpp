@@ -2,11 +2,9 @@
 // MSDF font rendering example
 //
 #include <fastgfx.hpp>
-#include <fsxx.hpp>
 #include <cmath>
 
 int main() {
-  fsxx::init();
   fgfx::init();
 
   auto msdfLayer = fgfx::engine->createMSDFLayer();
