@@ -1,5 +1,6 @@
 #include "io/FileLoader.hpp"
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <serialization/promise.hpp>
 #include <thread>
@@ -43,6 +44,7 @@ namespace io {
 #endif
 
   std::shared_ptr<serialization::promise<std::string>> loadFile(std::string path) {
+    std::cerr << "[file] loading " << path << "\n";
     auto p = std::make_shared<serialization::promise<std::string>>();
 #ifndef EMSCRIPTEN
     AssetLoadTask task = { .path = path, .promise = p };
