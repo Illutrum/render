@@ -36,6 +36,84 @@ namespace fgfx {
 
   void PBRSpriteLayer::initializeSpriteProgram() {
 
+#ifndef __USE_OPENGL
+    const char vShaderStr[] = R"GLSL(#version 300 es
+      in vec2 aVertexPosition;
+      in vec2 aVertexNormal;
+      in vec4 aVertexColor;
+      in vec2 aColorCoord;
+      in vec2 aNormalCoord;
+      in vec2 aMaterialCoord;
+      uniform mat4 uCameraMatrix;
+      out vec2 vNormal;
+      out vec4 vColor;
+      out highp vec2 vColorCoord;
+      out highp vec2 vNormalCoord;
+      out highp vec2 vMaterialCoord;
+      void main() {
+        gl_Position = uCameraMatrix * vec4(aVertexPosition, 0.0, 1.0);
+        vNormal = aVertexNormal;
+        vColor = aVertexColor;
+        vColorCoord = aColorCoord;
+        vNormalCoord = aNormalCoord;
+        vMaterialCoord = aMaterialCoord;
+      }
+    )GLSL";
+
+    const char fShaderStr[] = R"GLSL(#version 300 es
+      precision mediump float;
+      in vec2 vNormal;
+      in vec4 vColor;
+      uniform sampler2D uSampler;
+      in highp vec2 vColorCoord;
+      in highp vec2 vNormalCoord;
+      in highp vec2 vMaterialCoord;
+      out vec4 fragColor;
+
+      vec3 environmentLight(vec3 dir, float roughness) {
+        vec3 sunDir = normalize(vec3(1.0, 5.0, 4.0));
+        vec3 sunColor = vec3(1.0, 0.9, 0.8) * 5.0;
+        vec3 sunHaloColor = vec3(1.0, 0.8, 0.5) * 0.023;
+        float sunSize = 0.046;
+        float sunBorder = 0.05;
+        vec3 skyColor = vec3(0.027, 0.571, 0.847) * ( dir.y * 0.5 + 0.5);
+        vec3 groundColor = vec3(0.29, 0.23, 0.19) * (-dir.y * 0.7 + 0.3);
+        float groundHeight = 0.0;
+
+        float sunDistance = length(dir - sunDir);
+
+        vec3 sunBeam = sunColor * (clamp((sunSize - sunDistance) / (sunBorder + roughness), -1.0, 1.0) * 0.5 + 0.5);
+        vec3 sunHalo = sunHaloColor * (1.0 / (sunDistance + roughness));
+        skyColor+= sunBeam + sunHalo;
+
+        return mix(groundColor, skyColor, clamp(( dir.y + groundHeight) / roughness, -1.0, 1.0) * 0.5 + 0.5  );
+      }
+
+      void main() {
+        vec4 textureColor = texture(uSampler, vColorCoord);
+        vec4 color = textureColor * vColor;
+        vec4 textureNormalPixel = texture(uSampler, vNormalCoord);
+        vec4 textureMaterialPixel = texture(uSampler, vMaterialCoord);
+        vec3 normal = textureNormalPixel.xyz * 2.0 - vec3(1.0, 1.0, 1.0);
+        vec3 normalYAxis = vec3(vNormal.x, vNormal.y, 0);
+        vec3 normalXAxis = vec3(normalYAxis.y, -normalYAxis.x, 0);
+        normal = - normalXAxis * normal.x - normalYAxis * normal.y - vec3(0, 0, normal.z);
+        normal.z = normal.z * -1.0;
+        vec3 eyeDir = normalize(vec3(0, 0, 1));
+        vec3 reflection = normalize(reflect(eyeDir, normal));
+        float roughness = textureMaterialPixel.r;
+        float metallic = textureMaterialPixel.g;
+        float occulsion = textureMaterialPixel.b;
+        vec3 diffuse = color.rgb * (1.0 - metallic);
+        vec3 specular = mix(vec3(0.04), color.rgb, metallic);
+        vec3 envDiffuseColor = diffuse * environmentLight(normal, 2.0);
+        vec3 envSpecularColor = specular * environmentLight(reflection, roughness);
+        vec3 ambientLight = diffuse * vec3(1.0, 1.0, 1.0) * 0.2;
+        fragColor = vec4( occulsion * (envDiffuseColor + envSpecularColor), color.a * textureMaterialPixel.a);
+      }
+    )GLSL";
+#endif
+#ifdef __USE_OPENGL
     const char vShaderStr[] = R"GLSL(
       attribute vec2 aVertexPosition;
       attribute vec2 aVertexNormal;
@@ -110,6 +188,7 @@ namespace fgfx {
         gl_FragColor = vec4( occulsion * (envDiffuseColor + envSpecularColor), color.a * textureMaterialPixel.a);
       }
     )GLSL";
+#endif
 
     auto vertexShader = fgfx::loadShader ( GL_VERTEX_SHADER, vShaderStr );
     auto fragmentShader = fgfx::loadShader ( GL_FRAGMENT_SHADER, fShaderStr );

@@ -18,6 +18,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -stdlib=libc++ -O3 -Os")
 
 if(EMSCRIPTEN)
+  include(${CMAKE_SOURCE_DIR}/game-dev/engine/cmake/EngineHelpers.cmake)
   file(GLOB EXAMPLE_FILES "examples/*.cpp")
   foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
     get_filename_component(EXAMPLE_NAME ${EXAMPLE_FILE} NAME_WE)
@@ -27,11 +28,7 @@ if(EMSCRIPTEN)
     set_target_properties(${EXAMPLE_NAME} PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${EXAMPLE_OUT_DIR}
     )
-    target_link_options(${EXAMPLE_NAME} PRIVATE
-      "-sEXPORTED_RUNTIME_METHODS=UTF8ToString,allocate,intArrayFromString"
-      "-sEXPORTED_FUNCTIONS=_main,_malloc,_free,_fgfx_io_fileLoaded,_fgfx_io_fileFailed"
-      "--post-js=${FGFX_ROOT}/js/emscripten-glue.js"
-    )
+    apply_emscripten_webgl2_target(${EXAMPLE_NAME})
     add_custom_command(TARGET ${EXAMPLE_NAME} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
         ${FGFX_ROOT}/examples/${EXAMPLE_NAME}.html

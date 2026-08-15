@@ -38,7 +38,9 @@
 
   #ifndef EMSCRIPTEN
     #include <GLFW/glfw3.h>
-    #define __USE_GLFW
+    #ifndef __USE_GLFW
+      #define __USE_GLFW
+    #endif
   #endif
 
   #ifdef __APPLE__
@@ -53,8 +55,12 @@
 #endif
 #ifndef __USE_OPENGL
 
+#ifdef EMSCRIPTEN
+  #include <GLES3/gl3.h>
+#else
   #include <GLES2/gl2.h>
   #include <EGL/egl.h>
+#endif
 
 #endif
 

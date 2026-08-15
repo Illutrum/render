@@ -52,12 +52,13 @@ namespace fgfx {
   void MSDFLayer::initializeMSDFProgram() {
 #ifndef __USE_OPENGL
     const char vShaderStr[] =
-      "attribute vec3 aVertexPosition;\n"
-      "attribute vec4 aVertexColor;\n"
-      "attribute vec2 aTextureCoord;\n"
+      "#version 300 es\n"
+      "in vec3 aVertexPosition;\n"
+      "in vec4 aVertexColor;\n"
+      "in vec2 aTextureCoord;\n"
       "uniform mat4 uCameraMatrix;\n"
-      "varying vec4 vColor;\n"
-      "varying highp vec2 vTextureCoord;\n"
+      "out vec4 vColor;\n"
+      "out highp vec2 vTextureCoord;\n"
       "void main() {\n"
       "  gl_Position = uCameraMatrix * vec4(aVertexPosition, 1.0);\n"
       "  vColor = aVertexColor;\n"
@@ -65,12 +66,13 @@ namespace fgfx {
       "}\n";
 
     const char fShaderStr[] =
-      "#extension GL_OES_standard_derivatives : enable\n"
+      "#version 300 es\n"
       "precision mediump float;\n"
-      "varying vec4 vColor;\n"
+      "in vec4 vColor;\n"
       "uniform sampler2D uSampler;\n"
       "uniform float uPxRange;\n"
-      "varying highp vec2 vTextureCoord;\n"
+      "in highp vec2 vTextureCoord;\n"
+      "out vec4 fragColor;\n"
       "float median(float r, float g, float b) {\n"
       "  return max(min(r, g), min(max(r, g), b));\n"
       "}\n"
@@ -82,11 +84,11 @@ namespace fgfx {
       "  return uPxRange / max(sqrt(rx * rx + ry * ry), 0.0001);\n"
       "}\n"
       "void main() {\n"
-      "  vec3 msd = texture2D(uSampler, vTextureCoord).rgb;\n"
+      "  vec3 msd = texture(uSampler, vTextureCoord).rgb;\n"
       "  float sd = median(msd.r, msd.g, msd.b);\n"
       "  float screenPxDistance = screenPxRange() * (sd - 0.5);\n"
       "  float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);\n"
-      "  gl_FragColor = vec4(vColor.rgb, vColor.a * opacity);\n"
+      "  fragColor = vec4(vColor.rgb, vColor.a * opacity);\n"
       "}\n";
 #endif
 

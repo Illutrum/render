@@ -59,12 +59,13 @@ namespace fgfx {
 
 #ifndef __USE_OPENGL
     const char vShaderStr[] =
-        "attribute vec3 aVertexPosition;\n"
-        "attribute vec4 aVertexColor;\n"
-        "attribute vec2 aTextureCoord;\n"
+        "#version 300 es\n"
+        "in vec3 aVertexPosition;\n"
+        "in vec4 aVertexColor;\n"
+        "in vec2 aTextureCoord;\n"
         "uniform mat4 uCameraMatrix;\n"
-        "varying vec4 vColor;\n"
-        "varying highp vec2 vTextureCoord;\n"
+        "out vec4 vColor;\n"
+        "out highp vec2 vTextureCoord;\n"
         "void main() {\n"
         "  gl_Position = uCameraMatrix*vec4(aVertexPosition, 1.0);\n"
         "  vColor = aVertexColor;\n"
@@ -72,13 +73,15 @@ namespace fgfx {
         "}\n";
 
     const char fShaderStr[] =
-        "precision mediump float;\n"\
-        "varying vec4 vColor;\n"
+        "#version 300 es\n"
+        "precision mediump float;\n"
+        "in vec4 vColor;\n"
         "uniform sampler2D uSampler;\n"
-        "varying highp vec2 vTextureCoord;\n"
+        "in highp vec2 vTextureCoord;\n"
+        "out vec4 fragColor;\n"
         "void main() {\n"
-        "  vec4 textureColor = texture2D(uSampler, vTextureCoord);\n"
-        "  gl_FragColor = vColor*textureColor;\n"
+        "  vec4 textureColor = texture(uSampler, vTextureCoord);\n"
+        "  fragColor = vColor*textureColor;\n"
         "}\n";
 #endif
 

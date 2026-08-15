@@ -27,6 +27,56 @@ namespace fgfx {
 
   void NormalMappedSpriteLayer::initializeSpriteProgram() {
 
+#ifndef __USE_OPENGL
+    const char vShaderStr[] = R"GLSL(#version 300 es
+      in vec2 aVertexPosition;
+      in vec2 aVertexNormal;
+      in vec4 aVertexColor;
+      in vec2 aColorCoord;
+      in vec2 aNormalCoord;
+      uniform mat4 uCameraMatrix;
+      out vec2 vNormal;
+      out vec4 vColor;
+      out highp vec2 vColorCoord;
+      out highp vec2 vNormalCoord;
+      void main() {
+        gl_Position = uCameraMatrix*vec4(aVertexPosition, 0.0, 1.0);
+        vNormal = aVertexNormal;
+        vColor = aVertexColor;
+        vColorCoord = aColorCoord;
+        vNormalCoord = aNormalCoord;
+      }
+    )GLSL";
+
+    const char fShaderStr[] = R"GLSL(#version 300 es
+      precision mediump float;
+      in vec2 vNormal;
+      in vec4 vColor;
+      uniform sampler2D uSampler;
+      in highp vec2 vColorCoord;
+      in highp vec2 vNormalCoord;
+      out vec4 fragColor;
+      void main() {
+        vec4 textureColor = texture(uSampler, vColorCoord);
+        vec4 color = textureColor * vColor;
+        vec4 textureNormalPixel = texture(uSampler, vNormalCoord);
+        vec3 normal = textureNormalPixel.xyz*2.0 - vec3(1.0, 1.0, 1.0);
+        vec3 normalYAxis = vec3(vNormal.x, vNormal.y, 0);
+        vec3 normalXAxis = vec3(normalYAxis.y, -normalYAxis.x, 0);
+        normal = normalXAxis * normal.x + normalYAxis * normal.y + vec3(0, 0, normal.z);
+        normal.xy = normal.xy * -1.0;
+        vec3 lightDir = normalize(vec3(-1, -3, 6));
+        vec3 eyeDir = normalize(vec3(0, 0, 1));
+        vec3 reflection = normalize(-reflect(lightDir, normal));
+        float shininess = 23.0;
+        vec3 diffuse = color.xyz * max(dot(normal, lightDir), 0.0);
+        diffuse = clamp(diffuse, 0.0, 1.0);
+        vec3 specular = color.xyz * pow(max(dot(reflection,eyeDir),0.0), 0.3 * shininess);
+        fragColor = vec4(diffuse + specular , color.a * textureNormalPixel.a);
+      }
+    )GLSL";
+#endif
+#ifdef __USE_OPENGL
     const char vShaderStr[] = R"GLSL(
       attribute vec2 aVertexPosition;
       attribute vec2 aVertexNormal;
@@ -73,6 +123,7 @@ namespace fgfx {
         gl_FragColor = vec4(diffuse + specular , color.a * textureNormalPixel.a);
       }
     )GLSL";
+#endif
 
     auto vertexShader = fgfx::loadShader ( GL_VERTEX_SHADER, vShaderStr );
     auto fragmentShader = fgfx::loadShader ( GL_FRAGMENT_SHADER, fShaderStr );

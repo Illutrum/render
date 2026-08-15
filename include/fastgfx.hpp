@@ -13,6 +13,8 @@
 #include <functional>
 #include <serialization/promise.hpp>
 
+#include "../src/config.hpp"
+
 namespace fgfx {
 
   class Engine;

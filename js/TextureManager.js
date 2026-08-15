@@ -188,21 +188,6 @@ TextureManager.prototype.clean = function (engineTime) {
 TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData, image, fontName) {
   const data = parseBmFontData(fntData)
   const name = fontName ?? Module.UTF8ToString(Module._fgfx_SpriteFont_getName(spriteFont))
-  console.debug('PRELOAD PACKED FONT SPRITES', fntData, image)
-  for (let i = 0, l = data.chars.length; i < l; i++) {
-    const char = data.chars[i]
-    const c = String.fromCharCode(char.id)
-    const spriteName = 'font_' + name + '_' + c
-    this.loadingSprites.set(spriteName, {
-      char,
-      coords: null,
-      sprite: null,
-      texture: 0,
-      preloaded: true,
-      name: spriteName
-    })
-  }
-
   const w = image.width
   const h = image.height
   const glCtx = this.gl
@@ -217,44 +202,28 @@ TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData,
   const textureId = ModuleGL.textures.length
   ModuleGL.textures.push(texture)
 
-  console.debug('LOADED SPRITES FONT TEXTURE', textureId)
   for (let i = 0, l = data.chars.length; i < l; i++) {
     const char = data.chars[i]
     const c = String.fromCharCode(char.id)
     const spriteName = 'font_' + name + '_' + c
-    console.debug('FONT SPRITE LOADED', spriteName)
-    const loaded = this.loadingSprites.get(spriteName)
-    loaded.coords = {
-      xmin: char.x / w,
-      ymin: char.y / h,
-      xmax: (char.x + char.width) / w,
-      ymax: (char.y + char.height) / h,
-      width: char.width,
-      height: char.height
-    }
-    loaded.texture = textureId
-    this.loadingSprites.delete(spriteName)
-    this.loadedSprites.set(spriteName, loaded)
-    console.log('SPR', spriteName, 'ENG', this.engine)
     const cppSpriteName = Module.allocate(Module.intArrayFromString(spriteName), 0)
-    if (!loaded.sprite) loaded.sprite = Module._fgfx_getSprite(cppSpriteName)
+    const sprite = Module._fgfx_getEmptySprite(cppSpriteName)
     Module._free(cppSpriteName)
     Module._fgfx_Sprite_setTextureFragment(
-      loaded.sprite,
-      loaded.texture,
-      loaded.coords.xmin,
-      loaded.coords.ymin,
-      loaded.coords.xmax,
-      loaded.coords.ymax,
-      loaded.coords.width,
-      loaded.coords.height,
+      sprite,
+      textureId,
+      char.x / w,
+      char.y / h,
+      (char.x + char.width) / w,
+      (char.y + char.height) / h,
+      char.width,
+      char.height,
       true
     )
-    console.debug('SET CHAR', char, 'SP', loaded.sprite, 'AT', spriteFont)
     Module._fgfx_SpriteFont_setCharacter(
       spriteFont,
       char.id,
-      loaded.sprite,
+      sprite,
       char.width,
       char.height,
       char.xoffset,
@@ -266,7 +235,7 @@ TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData,
 }
 
 TextureManager.prototype.uploadPackedMSDFFont = function (msdfFont, fntData, image, fontName) {
-  const data = parseBmFont(fntData)
+  const data = parseBmFontData(fntData)
   const name = fontName ?? Module.UTF8ToString(Module._fgfx_MSDFFont_getName(msdfFont))
   const w = image.width
   const h = image.height
@@ -288,7 +257,7 @@ TextureManager.prototype.uploadPackedMSDFFont = function (msdfFont, fntData, ima
     const c = String.fromCharCode(char.id)
     const spriteName = 'msdf_' + name + '_' + c
     const cppSpriteName = Module.allocate(Module.intArrayFromString(spriteName), 0)
-    const sprite = Module._fgfx_getSprite(cppSpriteName)
+    const sprite = Module._fgfx_getEmptySprite(cppSpriteName)
     Module._free(cppSpriteName)
     Module._fgfx_Sprite_setTextureFragment(
       sprite,

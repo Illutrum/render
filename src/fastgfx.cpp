@@ -154,6 +154,11 @@ fgfx::Sprite* fgfx_getSprite(const char* spriteName) {
 }
 
 FGFX_API
+fgfx::Sprite* fgfx_getEmptySprite(const char* spriteName) {
+  return fgfx::engine->getEmptySprite(spriteName).get();
+}
+
+FGFX_API
 const char* fgfx_Sprite_getName(fgfx::Sprite* sprite) {
   return sprite->name.c_str();
 }
@@ -162,7 +167,9 @@ FGFX_API
 void fgfx_Sprite_setTextureFragment(fgfx::Sprite* sprite, int textureIdp, float left, float top, float right, float bottom,
                                     int widthp, int heightp, bool preloaded) {
   sprite->setTextureFragment(textureIdp, left, top, right, bottom, widthp, heightp, preloaded);
-  sprite->loadPromise->resolve(sprite->shared_from_this());
+  if (sprite->loadPromise) {
+    sprite->loadPromise->resolve(sprite->shared_from_this());
+  }
 }
 
 FGFX_API

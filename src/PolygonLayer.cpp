@@ -16,8 +16,30 @@ namespace fgfx {
   
   void PolygonLayer::initializePolygonProgram() {
     
+#ifndef __USE_OPENGL
     const char vShaderStr[] =
-      "attribute vec3 aVertexPosition;\n"\
+      "#version 300 es\n"
+      "in vec3 aVertexPosition;\n"
+      "in vec4 aVertexColor;\n"
+      "uniform mat4 uCameraMatrix;\n"
+      "out vec4 vColor;\n"
+      "void main() {\n"
+      "  gl_Position = uCameraMatrix*vec4(aVertexPosition, 1.0);\n"
+      "  vColor = aVertexColor;\n"
+      "}\n";
+
+    const char fShaderStr[] =
+      "#version 300 es\n"
+      "precision mediump float;\n"
+      "in vec4 vColor;\n"
+      "out vec4 fragColor;\n"
+      "void main() {\n"
+      "  fragColor = vColor;\n"
+      "}\n";
+#endif
+#ifdef __USE_OPENGL
+    const char vShaderStr[] =
+      "attribute vec3 aVertexPosition;\n"
       "attribute vec4 aVertexColor;\n"
       "uniform mat4 uCameraMatrix;\n"
       "varying vec4 vColor;\n"
@@ -26,15 +48,6 @@ namespace fgfx {
       "  vColor = aVertexColor;\n"
       "}\n";
 
-#ifndef __USE_OPENGL
-    const char fShaderStr[] =
-      "precision mediump float;\n"\
-      "varying vec4 vColor;\n"
-      "void main() {\n"
-      "  gl_FragColor = vColor;\n"
-      "}\n";
-#endif
-#ifdef __USE_OPENGL
     const char fShaderStr[] =
       "varying vec4 vColor;\n"
       "void main() {\n"

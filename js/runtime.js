@@ -3,7 +3,10 @@ import { Animator } from './Animator.js'
 
 const canvas = document.getElementById('fgfx_canvas')
 const glAttrs = { alpha: true }
-const gl = canvas.getContext('webgl', glAttrs) ?? canvas.getContext('experimental-webgl', glAttrs)
+const gl = canvas.getContext('webgl2', glAttrs)
+if (!gl) {
+  throw new Error('WebGL2 is required')
+}
 
 const animator = new Animator(false)
 let textureManager

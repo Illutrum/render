@@ -30,6 +30,40 @@ namespace fgfx {
 
   void TextureTransitionLayer::initializeTextureTransitionProgram() {
 
+#ifndef __USE_OPENGL
+    const char vShaderStr[] = R"GLSL(#version 300 es
+      in vec3 aVertexPosition;
+      in vec4 aVertexColor;
+      in vec3 aTextureCoord1;
+      in vec3 aTextureCoord2;
+      uniform mat4 uCameraMatrix;
+      out vec4 vColor;
+      out highp vec3 vTextureCoord1;
+      out highp vec3 vTextureCoord2;
+      void main() {
+        gl_Position = uCameraMatrix * vec4(aVertexPosition, 1.0);
+        vColor = aVertexColor;
+        vTextureCoord1 = aTextureCoord1;
+        vTextureCoord2 = aTextureCoord2;
+      }
+    )GLSL";
+
+    const char fShaderStr[] = R"GLSL(#version 300 es
+      precision mediump float;
+      in vec4 vColor;
+      uniform sampler2D uSampler;
+      in highp vec3 vTextureCoord1;
+      in highp vec3 vTextureCoord2;
+      out vec4 fragColor;
+      void main() {
+        vec4 textureColor1 = texture(uSampler, vTextureCoord1.xy);
+        vec4 textureColor2 = texture(uSampler, vTextureCoord2.xy);
+        vec4 color = vColor * ((textureColor1 * vTextureCoord1.z + textureColor2 * vTextureCoord2.z));
+        fragColor = color;
+      }
+    )GLSL";
+#endif
+#ifdef __USE_OPENGL
     const char vShaderStr[] = R"GLSL(
       attribute vec3 aVertexPosition;
       attribute vec4 aVertexColor;
@@ -46,7 +80,6 @@ namespace fgfx {
         vTextureCoord2 = aTextureCoord2;
       }
     )GLSL";
-        
 
     const char fShaderStr[] = R"GLSL(
       precision mediump float;
@@ -61,6 +94,7 @@ namespace fgfx {
         gl_FragColor = color;
       }
     )GLSL";
+#endif
 
     auto vertexShader = fgfx::loadShader ( GL_VERTEX_SHADER, vShaderStr );
     auto fragmentShader = fgfx::loadShader ( GL_FRAGMENT_SHADER, fShaderStr );
