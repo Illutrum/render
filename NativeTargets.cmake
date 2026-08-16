@@ -6,11 +6,12 @@ file(GLOB EXAMPLE_FILES "${FGFX_ROOT}/examples/*.cpp")
 
 foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
   get_filename_component(EXAMPLE_NAME ${EXAMPLE_FILE} NAME_WE)
+  set(EXAMPLE_OUT_DIR ${CMAKE_BINARY_DIR}/examples/${EXAMPLE_NAME})
   add_executable(${EXAMPLE_NAME} ${EXAMPLE_FILE})
   target_include_directories(${EXAMPLE_NAME} PRIVATE ${FGFX_INCLUDE} ${FGFX_SRC})
   target_compile_definitions(${EXAMPLE_NAME} PRIVATE __USE_OPENGL)
   set_target_properties(${EXAMPLE_NAME} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/examples
+    RUNTIME_OUTPUT_DIRECTORY ${EXAMPLE_OUT_DIR}
   )
   target_link_libraries(${EXAMPLE_NAME} PRIVATE
     engine_runtime
@@ -18,10 +19,12 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
   )
   apply_p2996_target(${EXAMPLE_NAME})
   apply_p2996_rpath_origin(${EXAMPLE_NAME})
+  # Binary lives in examples/<name>/; libengine_runtime.so stays in examples/
+  target_link_options(${EXAMPLE_NAME} PRIVATE "-Wl,-rpath,$ORIGIN/..")
   add_custom_command(TARGET ${EXAMPLE_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
       ${FGFX_ROOT}/examples/assets
-      ${CMAKE_BINARY_DIR}/examples/assets
+      ${EXAMPLE_OUT_DIR}/assets
   )
 endforeach()
 
