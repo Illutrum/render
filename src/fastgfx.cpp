@@ -36,7 +36,22 @@ namespace fgfx {
   GLFWwindow* glfwWindow;
 #endif
 
+  namespace {
+    std::vector<void(*)()> shutdownHooks;
+  }
+
+  void addShutdownHook(void (*fn)()) {
+    if (!fn) {
+      return;
+    }
+    shutdownHooks.push_back(fn);
+  }
+
   void destroy() {
+    for (auto it = shutdownHooks.rbegin(); it != shutdownHooks.rend(); ++it) {
+      (*it)();
+    }
+    shutdownHooks.clear();
 #ifdef __USE_GLFW
     //glfwDestroyWindow(fgfx::glfwWindow);
     glfwTerminate();

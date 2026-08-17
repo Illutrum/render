@@ -37,6 +37,7 @@ namespace fgfx {
 
   void init();
   void destroy();
+  void addShutdownHook(void (*fn)());
   extern std::shared_ptr<Engine> engine;
 
 #ifdef __USE_GLFW
