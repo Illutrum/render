@@ -41,10 +41,30 @@ window.fgfxLoader = window.fgfxLoader ?? {
   loadBinary: (name) => loadBinary(name)
 }
 
+let glContextHandle = 0
+
+function bindFgfxGlContext() {
+  if (glContextHandle) {
+    ModuleGL.makeContextCurrent(glContextHandle)
+    return
+  }
+  GLctx = gl
+}
+
 window.Module = window.Module ?? {}
 window.Module.initializeFastGfxRuntime = function () {
   console.log('INIT!')
-  GLctx = gl
+  if (!glContextHandle) {
+    glContextHandle = ModuleGL.registerContext(gl, {
+      majorVersion: 2,
+      minorVersion: 0,
+      alpha: true
+    })
+  }
+  if (!glContextHandle) {
+    throw new Error('Failed to register WebGL2 context with Emscripten')
+  }
+  bindFgfxGlContext()
   animator.addAnimation(animateFgfx)
 }
 window.Module.initializeFastGfxTextureManager = function () {
@@ -54,7 +74,7 @@ window.Module.initializeFastGfxTextureManager = function () {
 const pixelRatio = window.devicePixelRatio ?? 1
 const animateFgfx = (time, delta) => {
   textureManager.reload()
-  GLctx = gl
+  bindFgfxGlContext()
 
   const pixelWidth = (canvas.clientWidth * pixelRatio) | 0
   const pixelHeight = (canvas.clientHeight * pixelRatio) | 0
