@@ -28,6 +28,7 @@ namespace fgfx {
     static GLuint msdfProgramUniformCameraMatrix;
     static GLuint msdfProgramUniformSampler;
     static GLuint msdfProgramUniformPxRange;
+    static GLuint msdfProgramUniformAtlasSize;
 
     static void initializeMSDFProgram();
     static void destroyMSDFProgram();

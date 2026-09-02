@@ -48,6 +48,7 @@ namespace fgfx {
   GLuint MSDFLayer::msdfProgramUniformCameraMatrix = 0;
   GLuint MSDFLayer::msdfProgramUniformSampler = 0;
   GLuint MSDFLayer::msdfProgramUniformPxRange = 0;
+  GLuint MSDFLayer::msdfProgramUniformAtlasSize = 0;
 
   void MSDFLayer::initializeMSDFProgram() {
 #ifndef __USE_OPENGL
@@ -67,21 +68,20 @@ namespace fgfx {
 
     const char fShaderStr[] =
       "#version 300 es\n"
-      "precision mediump float;\n"
+      "precision highp float;\n"
       "in vec4 vColor;\n"
       "uniform sampler2D uSampler;\n"
       "uniform float uPxRange;\n"
+      "uniform vec2 uAtlasSize;\n"
       "in highp vec2 vTextureCoord;\n"
       "out vec4 fragColor;\n"
       "float median(float r, float g, float b) {\n"
       "  return max(min(r, g), min(max(r, g), b));\n"
       "}\n"
       "float screenPxRange() {\n"
-      "  vec2 dx = dFdx(vTextureCoord);\n"
-      "  vec2 dy = dFdy(vTextureCoord);\n"
-      "  float rx = length(vec2(dx.x, dy.x));\n"
-      "  float ry = length(vec2(dx.y, dy.y));\n"
-      "  return uPxRange / max(sqrt(rx * rx + ry * ry), 0.0001);\n"
+      "  vec2 unitRange = vec2(uPxRange) / max(uAtlasSize, vec2(1.0));\n"
+      "  vec2 screenTexSize = vec2(1.0) / fwidth(vTextureCoord);\n"
+      "  return max(0.5 * dot(unitRange, screenTexSize), 1.0);\n"
       "}\n"
       "void main() {\n"
       "  vec3 msd = texture(uSampler, vTextureCoord).rgb;\n"
@@ -110,16 +110,15 @@ namespace fgfx {
       "varying vec4 vColor;\n"
       "uniform sampler2D uSampler;\n"
       "uniform float uPxRange;\n"
+      "uniform vec2 uAtlasSize;\n"
       "varying vec2 vTextureCoord;\n"
       "float median(float r, float g, float b) {\n"
       "  return max(min(r, g), min(max(r, g), b));\n"
       "}\n"
       "float screenPxRange() {\n"
-      "  vec2 dx = dFdx(vTextureCoord);\n"
-      "  vec2 dy = dFdy(vTextureCoord);\n"
-      "  float rx = length(vec2(dx.x, dy.x));\n"
-      "  float ry = length(vec2(dx.y, dy.y));\n"
-      "  return uPxRange / max(sqrt(rx * rx + ry * ry), 0.0001);\n"
+      "  vec2 unitRange = vec2(uPxRange) / max(uAtlasSize, vec2(1.0));\n"
+      "  vec2 screenTexSize = vec2(1.0) / fwidth(vTextureCoord);\n"
+      "  return max(0.5 * dot(unitRange, screenTexSize), 1.0);\n"
       "}\n"
       "void main() {\n"
       "  vec3 msd = texture2D(uSampler, vTextureCoord).rgb;\n"
@@ -145,6 +144,7 @@ namespace fgfx {
     msdfProgramUniformCameraMatrix = glGetUniformLocation(program, "uCameraMatrix");
     msdfProgramUniformSampler = glGetUniformLocation(program, "uSampler");
     msdfProgramUniformPxRange = glGetUniformLocation(program, "uPxRange");
+    msdfProgramUniformAtlasSize = glGetUniformLocation(program, "uAtlasSize");
   }
 
   void MSDFLayer::beginDraw(const ModelViewProjection& mvp) {
@@ -186,6 +186,11 @@ namespace fgfx {
       glBindTexture(GL_TEXTURE_2D, buffer->textureId);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      GLint atlasWidth = 1;
+      GLint atlasHeight = 1;
+      glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &atlasWidth);
+      glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &atlasHeight);
+      glUniform2f(msdfProgramUniformAtlasSize, static_cast<float>(atlasWidth), static_cast<float>(atlasHeight));
       glUniform1i(msdfProgramUniformSampler, 0);
       buffer->render();
     }
