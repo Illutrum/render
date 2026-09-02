@@ -22,6 +22,10 @@ namespace fgfx {
     pxRange = range;
   }
 
+  void MSDFFont::setScale(float scaleW, float scaleH) {
+    scale = glm::vec2(scaleW, scaleH);
+  }
+
   void MSDFFont::setCharacter(unsigned short character, std::shared_ptr<Sprite> sprite, glm::vec2 size,
                               glm::vec2 offset, float advance) {
     SpriteCharacter characterStruct;
@@ -35,6 +39,7 @@ namespace fgfx {
   void MSDFFont::renderString(MSDFLayer* layer, const glm::mat4& mat, const glm::vec4& color,
                               const std::string& text) {
     layer->setPxRange(pxRange);
+    layer->setAtlasSize(scale);
     float x = 0;
     for (int i = 0; i < (int)text.size(); i++) {
       char c = text[i];
@@ -54,6 +59,7 @@ namespace fgfx {
   void MSDFFont::renderSubString(MSDFLayer* layer, const glm::mat4& mat, const glm::vec4& color,
                                  const std::string& text, int from, int count) {
     layer->setPxRange(pxRange);
+    layer->setAtlasSize(scale);
     float x = 0;
     int to = from + count;
     for (int i = from; i < to; i++) {

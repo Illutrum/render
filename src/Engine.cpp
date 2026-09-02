@@ -22,6 +22,11 @@ namespace fgfx {
 
     width = 0;
     height = 0;
+    boundFramebuffer = 0;
+    viewportX = 0;
+    viewportY = 0;
+    viewportW = 0;
+    viewportH = 0;
 
     renderTime = 0;
   }
@@ -232,14 +237,33 @@ namespace fgfx {
 #endif
   }
 
+  void Engine::seedDrawTarget(int widthp, int heightp) {
+    boundFramebuffer = 0;
+    viewportX = 0;
+    viewportY = 0;
+    viewportW = widthp;
+    viewportH = heightp;
+  }
+
+  void Engine::bindDrawTarget(GLint fbo, int x, int y, int w, int h) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glViewport(x, y, w, h);
+    boundFramebuffer = fbo;
+    viewportX = x;
+    viewportY = y;
+    viewportW = w;
+    viewportH = h;
+  }
+
   void Engine::render(double time, float delta, int widthp, int heightp) {
+    width = widthp;
+    height = heightp;
+    seedDrawTarget(widthp, heightp);
     uploadTextures();
     checkGLError();
 
     renderTime = time;
     renderDelta = delta;
-    width = widthp;
-    height = heightp;
     if(renderFunction) renderFunction(time, delta);
   }
 
@@ -280,6 +304,7 @@ namespace fgfx {
       double delta = now - lastTime;
       glfwGetFramebufferSize(glfwWindow, &width, &height);
       glViewport(0, 0, width, height);
+      seedDrawTarget(width, height);
       int w, h;
       glfwGetWindowSize(glfwWindow, &w, &h);
       realWidth = 0.264 * w; // pixels to mm

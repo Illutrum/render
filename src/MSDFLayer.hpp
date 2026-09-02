@@ -15,6 +15,7 @@ namespace fgfx {
   public:
     std::vector<MSDFBuffer*> buffers;
     float pxRange;
+    glm::vec2 atlasSize;
 
     MSDFBuffer* getBuffer(int textureId);
 
@@ -37,6 +38,7 @@ namespace fgfx {
     MSDFLayer(Engine* enginep);
 
     void setPxRange(float range);
+    void setAtlasSize(glm::vec2 size);
 
     void bufferSprite(const std::shared_ptr<Sprite>& sprite, glm::vec2 pos, glm::vec4 color, float size, float rotation);
     void bufferSprite(const std::shared_ptr<Sprite>& sprite, const glm::mat4 &mat, glm::vec4 color);

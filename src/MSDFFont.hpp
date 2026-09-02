@@ -26,6 +26,7 @@ namespace fgfx {
 
     void setHeight(float linep, float basep);
     void setPxRange(float range);
+    void setScale(float scaleW, float scaleH);
     void setCharacter(unsigned short character, std::shared_ptr<Sprite> sprite, glm::vec2 size, glm::vec2 offset, float advance);
 
     void renderString(MSDFLayer* layer, const glm::mat4& mat, const glm::vec4& color, const std::string& text);

@@ -8,10 +8,15 @@ namespace fgfx {
   MSDFLayer::MSDFLayer(Engine* enginep) : TypedLayer<MSDFLayer>(enginep) {
     composition = 1;
     pxRange = 4.0f;
+    atlasSize = glm::vec2(1.0f, 1.0f);
   }
 
   void MSDFLayer::setPxRange(float range) {
     pxRange = range;
+  }
+
+  void MSDFLayer::setAtlasSize(glm::vec2 size) {
+    atlasSize = size;
   }
 
   MSDFBuffer* MSDFLayer::getBuffer(int textureId) {
@@ -155,6 +160,7 @@ namespace fgfx {
     glUniformMatrix4fv(msdfProgramUniformCameraMatrix, 1, GL_FALSE,
                        (GLfloat*)glm::value_ptr(mvp.multipliedMatrix));
     glUniform1f(msdfProgramUniformPxRange, pxRange);
+    glUniform2f(msdfProgramUniformAtlasSize, atlasSize.x, atlasSize.y);
   }
 
   void MSDFLayer::endDraw() {
@@ -186,11 +192,6 @@ namespace fgfx {
       glBindTexture(GL_TEXTURE_2D, buffer->textureId);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      GLint atlasWidth = 1;
-      GLint atlasHeight = 1;
-      glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &atlasWidth);
-      glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &atlasHeight);
-      glUniform2f(msdfProgramUniformAtlasSize, static_cast<float>(atlasWidth), static_cast<float>(atlasHeight));
       glUniform1i(msdfProgramUniformSampler, 0);
       buffer->render();
     }

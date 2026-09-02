@@ -240,6 +240,12 @@ namespace fgfx {
         }
       }
     }
+    if (font->scale.x <= 0.0f) {
+      font->scale.x = static_cast<float>(image->width);
+    }
+    if (font->scale.y <= 0.0f) {
+      font->scale.y = static_cast<float>(image->height);
+    }
     font->setPxRange(pxRange);
   }
 

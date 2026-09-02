@@ -62,6 +62,11 @@ namespace fgfx {
 
     int width;
     int height;
+    GLint boundFramebuffer;
+    int viewportX;
+    int viewportY;
+    int viewportW;
+    int viewportH;
 
     double realWidth;
     double realHeight;
@@ -97,6 +102,8 @@ namespace fgfx {
     void setRenderFunction(std::function<void(float,float)> renderFunctionp);
     void render(double time, float delta, int widthp, int heightp);
     void uploadTextures();
+    void seedDrawTarget(int widthp, int heightp);
+    void bindDrawTarget(GLint fbo, int x, int y, int w, int h);
 
     std::shared_ptr<SpriteLayer> createSpriteLayer();
     std::shared_ptr<MSDFLayer> createMSDFLayer();

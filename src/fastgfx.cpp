@@ -250,6 +250,11 @@ void fgfx_MSDFFont_setPxRange(fgfx::MSDFFont* font, float range) {
 }
 
 FGFX_API
+void fgfx_MSDFFont_setScale(fgfx::MSDFFont* font, float scaleW, float scaleH) {
+  font->setScale(scaleW, scaleH);
+}
+
+FGFX_API
 void fgfx_MSDFFont_setCharacter(fgfx::MSDFFont* font, unsigned short character, fgfx::Sprite* sprite,
                                 float xSize, float ySize, float xOffset, float yOffset, float advance) {
   font->setCharacter(character, sprite->shared_from_this(), glm::vec2(xSize, ySize), glm::vec2(xOffset, yOffset), advance);

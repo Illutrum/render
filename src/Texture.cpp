@@ -3,6 +3,7 @@
 //
 
 #include "Texture.hpp"
+#include <fastgfx.hpp>
 
 namespace fgfx {
 
@@ -123,8 +124,11 @@ namespace fgfx {
     }
   }
   void Texture::beginRender() {
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
-    glGetIntegerv(GL_VIEWPORT, old_viewport);
+    old_fbo = engine->boundFramebuffer;
+    old_viewport[0] = engine->viewportX;
+    old_viewport[1] = engine->viewportY;
+    old_viewport[2] = engine->viewportW;
+    old_viewport[3] = engine->viewportH;
     if(framebuffer == -1) {
       GLuint fbo;
       glGenFramebuffers(1, &fbo);
@@ -132,13 +136,11 @@ namespace fgfx {
     }
 
     glBindTexture(GL_TEXTURE_2D, 0);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    engine->bindDrawTarget(framebuffer, 0, 0, width, height);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-    glViewport(0, 0, width, height);
   }
   void Texture::endRender(bool clean) {
-    glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
-    glViewport(old_viewport[0], old_viewport[1], old_viewport[2], old_viewport[3]);
+    engine->bindDrawTarget(old_fbo, old_viewport[0], old_viewport[1], old_viewport[2], old_viewport[3]);
     if(clean) {
       GLuint fbo = framebuffer;
       glDeleteFramebuffers(1, &fbo);

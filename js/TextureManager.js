@@ -283,6 +283,11 @@ TextureManager.prototype.uploadPackedMSDFFont = function (msdfFont, fntData, ima
   }
   Module._fgfx_MSDFFont_setHeight(msdfFont, data.common.lineHeight, data.common.base)
   Module._fgfx_MSDFFont_setPxRange(msdfFont, data.distanceRange ?? 4.0)
+  Module._fgfx_MSDFFont_setScale(
+    msdfFont,
+    data.common.scaleW || w,
+    data.common.scaleH || h
+  )
   Module._fgfx_MSDFFont_finishLoad(msdfFont)
 }
 
