@@ -6,6 +6,7 @@
 #include "TextureManager.hpp"
 #include "Image.hpp"
 #include "BmFontParse.hpp"
+#include "backend/RenderBackend.hpp"
 #include <fastgfx.hpp>
 #include <algorithm>
 #include <functional>
@@ -70,6 +71,33 @@ namespace fgfx {
     return os.str() ;
   }
 
+  static GLuint createAtlasTexture(const std::shared_ptr<Image>& image, bool mipmaps) {
+#ifdef FGFX_BACKEND_WEBGPU
+    TextureDesc desc;
+    desc.width = image->width;
+    desc.height = image->height;
+    desc.format = PixelFormat::RGBA8Unorm;
+    desc.generateMipmaps = mipmaps;
+    TextureHandle handle = engine->getBackend()->createTexture(desc);
+    engine->getBackend()->updateTexture(handle, image->width, image->height,
+                                        image->data);
+    return static_cast<GLuint>(handle);
+#else
+    GLuint texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                    mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+    if (mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
+    return texture;
+#endif
+  }
+
   static void uploadMSDFFontGlyph(std::shared_ptr<MSDFFont> font, std::shared_ptr<Image> image, GLuint texture,
                                   unsigned short character, int x, int y, int width, int height,
                                   int xoffset, int yoffset, int xadvance) {
@@ -85,18 +113,7 @@ namespace fgfx {
   }
 
   void uploadSpriteFont(std::shared_ptr<SpriteFont> font, std::shared_ptr<Image> image, std::string data) {
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 image->data);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    GLuint texture = createAtlasTexture(image, true);
 
     std::istringstream in(data);
     std::string line;
@@ -158,14 +175,7 @@ namespace fgfx {
   }
 
   void uploadMSDFFont(std::shared_ptr<MSDFFont> font, std::shared_ptr<Image> image, std::string data) {
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+    GLuint texture = createAtlasTexture(image, false);
 
     float pxRange = 4.0f;
     const bool isXml = data.find("<font") != std::string::npos || data.find("<?xml") != std::string::npos;

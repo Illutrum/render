@@ -17,6 +17,11 @@ foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
     engine_runtime
     GL png z glfw GLEW
   )
+  if(FGFX_BACKEND STREQUAL "WebGPU")
+    target_link_libraries(${EXAMPLE_NAME} PRIVATE webgpu)
+    target_compile_definitions(${EXAMPLE_NAME} PRIVATE FGFX_BACKEND_WEBGPU)
+    target_copy_webgpu_binaries(${EXAMPLE_NAME})
+  endif()
   apply_p2996_target(${EXAMPLE_NAME})
   apply_p2996_rpath_origin(${EXAMPLE_NAME})
   # Binary lives in examples/<name>/; libengine_runtime.so stays in examples/

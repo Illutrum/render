@@ -18,20 +18,10 @@
 namespace fgfx {
 
   class Engine;
-  class LineLayer;
-  class SpriteLayer;
-  class Layer;
   class Sprite;
-  class PolygonLayer;
   class SpriteFont;
   class MSDFFont;
   class Texture;
-  class TexturedLayer;
-  class TextureTransitionLayer;
-  class UniversalLayer;
-  class NormalMappedSpriteLayer;
-  class PBRSpriteLayer;
-  class FrameBuffer;
 
   class InitializationFailed : public std::exception {};
 
@@ -42,35 +32,26 @@ namespace fgfx {
 
 #ifdef __USE_GLFW
   extern GLFWwindow* glfwWindow;
+#ifdef FGFX_BACKEND_WEBGPU
+  extern GLFWwindow* glContextWindow;  // hidden window for GL texture loading
+#endif
 #endif
 }
 
 #include "../src/Sprite.hpp"
 #include "../src/Engine.hpp"
-#include "../src/LineLayer.hpp"
-#include "../src/SpriteLayer.hpp"
-#include "../src/Layer.hpp"
-#include "../src/PolygonLayer.hpp"
+#include "../src/SpriteBatch.hpp"
+#include "../src/GlyphBatch.hpp"
+#include "../src/PolygonBatch.hpp"
+#include "../src/LineBatch.hpp"
+#include "../src/TexturedBatch.hpp"
+#include "../src/TextureTransitionBatch.hpp"
+#include "../src/NormalMappedSpriteBatch.hpp"
+#include "../src/PBRSpriteBatch.hpp"
+#include "../src/backend/FrameGraph.hpp"
 #include "../src/SpriteFont.hpp"
 #include "../src/MSDFFont.hpp"
-#include "../src/MSDFLayer.hpp"
 #include "../src/Texture.hpp"
-#include "../src/FrameBuffer.hpp"
-
-#include "../src/TexturedBuffer.hpp"
-#include "../src/TexturedLayer.hpp"
-#include "../src/TextureTransitionLayer.hpp"
 #include "../src/Image.hpp"
-
-#include "../src/UniversalLayer.hpp"
-#include "../src/NormalMappedSpriteLayer.hpp"
-#include "../src/PBRSpriteLayer.hpp"
-
-#include "../src/BuffersLayer.hpp"
-#include "../src/PBRSpriteShaderBuffer.hpp"
-#include "../src/PBRPolygonBuffer.hpp"
-#include "../src/PBRTexturedBuffer.hpp"
-
-#include "../src/GeneratorBuffer.hpp"
 
 #endif //FGFX_H

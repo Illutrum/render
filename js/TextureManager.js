@@ -42,6 +42,20 @@ function TextureManager(gl, loader) {
   this.spacing = 2
 }
 
+TextureManager.prototype.uploadPixelsToWebGPU = function (image) {
+  const scratch = document.createElement('canvas')
+  scratch.width = image.width
+  scratch.height = image.height
+  const ctx = scratch.getContext('2d')
+  ctx.drawImage(image, 0, 0)
+  const imgData = ctx.getImageData(0, 0, image.width, image.height)
+  const ptr = Module._malloc(imgData.data.length)
+  Module.HEAPU8.set(imgData.data, ptr)
+  const textureId = Module._fgfx_createTextureRGBA(image.width, image.height, ptr)
+  Module._free(ptr)
+  return textureId
+}
+
 TextureManager.prototype.loadSprite = function (sprite) {
   const name = Module.UTF8ToString(Module._fgfx_Sprite_getName(sprite))
   console.debug('SPRITE REQUESTED', name, sprite)
@@ -77,6 +91,32 @@ TextureManager.prototype.loadSprite = function (sprite) {
   this.loadingSprites.set(name, spriteEntry)
   this.loader.loadSpriteImage(name).then((image) => {
     spriteEntry.image = image
+    if (window.FGFX_BACKEND_WEBGPU) {
+      const textureId = this.uploadPixelsToWebGPU(image)
+      spriteEntry.texture = textureId
+      spriteEntry.coords = {
+        xmin: 0,
+        ymin: 0,
+        xmax: 1,
+        ymax: 1,
+        width: image.width,
+        height: image.height
+      }
+      this.loadingSprites.delete(name)
+      this.loadedSprites.set(name, spriteEntry)
+      Module._fgfx_Sprite_setTextureFragment(
+        spriteEntry.sprite,
+        textureId,
+        0,
+        0,
+        1,
+        1,
+        image.width,
+        image.height,
+        false
+      )
+      return
+    }
     let bigger = false
     let added = false
     while (image.width + this.spacing * 2 > this.maxSize || image.height + this.spacing * 2 > this.maxSize) {
@@ -124,6 +164,11 @@ TextureManager.prototype.loadTexture = function (texture) {
   const imagePromise = this.loader.loadTextureImage(name)
 
   imagePromise.then((image) => {
+    if (window.FGFX_BACKEND_WEBGPU) {
+      const textureId = this.uploadPixelsToWebGPU(image)
+      Module._fgfx_Texture_setTexture(texture, textureId)
+      return
+    }
     let textureId = Module._fgfx_Texture_getTexture(texture)
     console.error('LOADED TEX IMAGE', name, textureId)
     let tex
@@ -185,22 +230,36 @@ TextureManager.prototype.clean = function (engineTime) {
   }
 }
 
-TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData, image, fontName) {
-  const data = parseBmFontData(fntData)
-  const name = fontName ?? Module.UTF8ToString(Module._fgfx_SpriteFont_getName(spriteFont))
-  const w = image.width
-  const h = image.height
+TextureManager.prototype.uploadAtlasImage = function (image, withMipmaps) {
+  if (window.FGFX_BACKEND_WEBGPU) {
+    return this.uploadPixelsToWebGPU(image)
+  }
   const glCtx = this.gl
   const texture = glCtx.createTexture()
   glCtx.bindTexture(glCtx.TEXTURE_2D, texture)
   glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, glCtx.RGBA, glCtx.UNSIGNED_BYTE, image)
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.LINEAR)
-  glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.LINEAR_MIPMAP_LINEAR)
-  glCtx.generateMipmap(glCtx.TEXTURE_2D)
+  glCtx.texParameteri(
+    glCtx.TEXTURE_2D,
+    glCtx.TEXTURE_MIN_FILTER,
+    withMipmaps ? glCtx.LINEAR_MIPMAP_LINEAR : glCtx.LINEAR
+  )
+  glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE)
+  glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE)
+  if (withMipmaps) glCtx.generateMipmap(glCtx.TEXTURE_2D)
 
   while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
   const textureId = ModuleGL.textures.length
   ModuleGL.textures.push(texture)
+  return textureId
+}
+
+TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData, image, fontName) {
+  const data = parseBmFontData(fntData)
+  const name = fontName ?? Module.UTF8ToString(Module._fgfx_SpriteFont_getName(spriteFont))
+  const w = image.width
+  const h = image.height
+  const textureId = this.uploadAtlasImage(image, true)
 
   for (let i = 0, l = data.chars.length; i < l; i++) {
     const char = data.chars[i]
@@ -239,18 +298,7 @@ TextureManager.prototype.uploadPackedMSDFFont = function (msdfFont, fntData, ima
   const name = fontName ?? Module.UTF8ToString(Module._fgfx_MSDFFont_getName(msdfFont))
   const w = image.width
   const h = image.height
-  const glCtx = this.gl
-  const texture = glCtx.createTexture()
-  glCtx.bindTexture(glCtx.TEXTURE_2D, texture)
-  glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, glCtx.RGBA, glCtx.UNSIGNED_BYTE, image)
-  glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.LINEAR)
-  glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.LINEAR)
-  glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE)
-  glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE)
-
-  while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
-  const textureId = ModuleGL.textures.length
-  ModuleGL.textures.push(texture)
+  const textureId = this.uploadAtlasImage(image, false)
 
   for (let i = 0, l = data.chars.length; i < l; i++) {
     const char = data.chars[i]

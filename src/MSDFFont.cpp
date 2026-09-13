@@ -1,8 +1,36 @@
 #include "MSDFFont.hpp"
+#include "GlyphBatch.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include "config.hpp"
 
 namespace fgfx {
+
+  namespace {
+    template <typename Batch>
+    void bufferString(MSDFFont& font, Batch* layer, const glm::mat4& mat,
+                      const glm::vec4& color, const std::string& text,
+                      int from, int count) {
+      layer->setPxRange(font.pxRange);
+      layer->setAtlasSize(font.scale);
+      float x = 0;
+      int to = from + count;
+      for (int i = from; i < to; i++) {
+        char c = text[i];
+        auto it = font.characters.find(c);
+        if (it != font.characters.end()) {
+          SpriteCharacter charStruct = it->second;
+          glm::vec2 pos(x + charStruct.size.x * 0.5f + charStruct.offset.x,
+                        -charStruct.size.y * 0.5f - charStruct.offset.y);
+          auto translate = glm::translate(glm::mat4(1.0), glm::vec3(pos, 0));
+          auto scaleMat = glm::scale(glm::mat4(1.0),
+                                     glm::vec3(charStruct.size.x * 0.5f,
+                                               charStruct.size.y * 0.5f, 1));
+          layer->rawBufferSprite(charStruct.sprite, mat * translate * scaleMat, color);
+          x += charStruct.advance;
+        }
+      }
+    }
+  }
 
   MSDFFont::MSDFFont(std::string namep) : name(namep) {
     scale = glm::vec2(1, 1);
@@ -36,53 +64,22 @@ namespace fgfx {
     characters[character] = characterStruct;
   }
 
-  void MSDFFont::renderString(MSDFLayer* layer, const glm::mat4& mat, const glm::vec4& color,
+  void MSDFFont::renderString(GlyphBatch* layer, const glm::mat4& mat, const glm::vec4& color,
                               const std::string& text) {
-    layer->setPxRange(pxRange);
-    layer->setAtlasSize(scale);
-    float x = 0;
-    for (int i = 0; i < (int)text.size(); i++) {
-      char c = text[i];
-      auto it = characters.find(c);
-      if (it != characters.end()) {
-        SpriteCharacter charStruct = it->second;
-        glm::vec2 pos(x + charStruct.size.x * 0.5f + charStruct.offset.x,
-                      -charStruct.size.y * 0.5f - charStruct.offset.y);
-        auto translate = glm::translate(glm::mat4(1.0), glm::vec3(pos, 0));
-        auto scaleMat = glm::scale(glm::mat4(1.0), glm::vec3(charStruct.size.x * 0.5f, charStruct.size.y * 0.5f, 1));
-        layer->rawBufferSprite(charStruct.sprite, mat * translate * scaleMat, color);
-        x += charStruct.advance;
-      }
-    }
+    bufferString(*this, layer, mat, color, text, 0, (int)text.size());
   }
 
-  void MSDFFont::renderSubString(MSDFLayer* layer, const glm::mat4& mat, const glm::vec4& color,
+  void MSDFFont::renderSubString(GlyphBatch* layer, const glm::mat4& mat, const glm::vec4& color,
                                  const std::string& text, int from, int count) {
-    layer->setPxRange(pxRange);
-    layer->setAtlasSize(scale);
-    float x = 0;
-    int to = from + count;
-    for (int i = from; i < to; i++) {
-      char c = text[i];
-      auto it = characters.find(c);
-      if (it != characters.end()) {
-        SpriteCharacter charStruct = it->second;
-        glm::vec2 pos(x + charStruct.size.x * 0.5f + charStruct.offset.x,
-                      -charStruct.size.y * 0.5f - charStruct.offset.y);
-        auto translate = glm::translate(glm::mat4(1.0), glm::vec3(pos, 0));
-        auto scaleMat = glm::scale(glm::mat4(1.0), glm::vec3(charStruct.size.x * 0.5f, charStruct.size.y * 0.5f, 1));
-        layer->rawBufferSprite(charStruct.sprite, mat * translate * scaleMat, color);
-        x += charStruct.advance;
-      }
-    }
+    bufferString(*this, layer, mat, color, text, from, count);
   }
 
-  void MSDFFont::renderString(const std::shared_ptr<MSDFLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+  void MSDFFont::renderString(const std::shared_ptr<GlyphBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                               const std::string& text) {
     renderString(layer.get(), mat, color, text);
   }
 
-  void MSDFFont::renderSubString(const std::shared_ptr<MSDFLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+  void MSDFFont::renderSubString(const std::shared_ptr<GlyphBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                                  const std::string& text, int from, int count) {
     renderSubString(layer.get(), mat, color, text, from, count);
   }

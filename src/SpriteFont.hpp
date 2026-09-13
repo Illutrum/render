@@ -6,9 +6,15 @@
 #define ENGINE_SPRITEFONT_H
 
 #include <glm/glm.hpp>
-#include "SpriteLayer.hpp"
+#include "Sprite.hpp"
+#include <map>
+#include <memory>
+#include <string>
+#include <serialization/promise.hpp>
 
 namespace fgfx {
+
+  class SpriteBatch;
 
   class SpriteCharacter {
   public:
@@ -34,14 +40,14 @@ namespace fgfx {
     void setCharacter(unsigned short character, std::shared_ptr<Sprite> sprite, glm::vec2 size, glm::vec2 offset,
                       float advance);
 
-    void renderString(const std::shared_ptr<SpriteLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+    void renderString(const std::shared_ptr<SpriteBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                       const std::string& text);
-    void renderSubString(const std::shared_ptr<SpriteLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+    void renderSubString(const std::shared_ptr<SpriteBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                          const std::string& text, int from, int count);
 
-    void renderString(SpriteLayer* layer, const glm::mat4& mat, const glm::vec4& color,
+    void renderString(SpriteBatch* layer, const glm::mat4& mat, const glm::vec4& color,
                       const std::string& text);
-    void renderSubString(SpriteLayer* layer, const glm::mat4& mat, const glm::vec4& color,
+    void renderSubString(SpriteBatch* layer, const glm::mat4& mat, const glm::vec4& color,
                          const std::string& text, int from, int count);
 
     glm::vec2 measureString(const std::string& text);

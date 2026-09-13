@@ -1,0 +1,73 @@
+// WebGLBackend: RenderBackend implemented over the existing OpenGL ES 3.0 /
+// WebGL2 calls. For the spike only the sprite path is implemented.
+//
+// Handle convention: TextureHandle / BufferHandle alias the GL object name
+// (GLuint). PipelineHandle aliases the GL program name; per-pipeline metadata
+// (vertex bindings, sampler location) is kept in an internal map.
+
+#ifndef FGFX_BACKEND_WEBGL_BACKEND_HPP
+#define FGFX_BACKEND_WEBGL_BACKEND_HPP
+
+#include "RenderBackend.hpp"
+#include "../config.hpp"
+
+#include <unordered_map>
+#include <vector>
+
+namespace fgfx {
+
+class WebGLBackend : public RenderBackend {
+ public:
+  WebGLBackend() = default;
+  ~WebGLBackend() override;
+
+  BackendType type() const override { return BackendType::GL; }
+
+  PipelineHandle createPipeline(const PipelineDesc& desc) override;
+  void destroyPipeline(PipelineHandle pipeline) override;
+
+  BufferHandle createBuffer(const BufferDesc& desc) override;
+  void updateBuffer(BufferHandle buffer, const void* data, int size) override;
+  void destroyBuffer(BufferHandle buffer) override;
+
+  TextureHandle createTexture(const TextureDesc& desc) override;
+  void updateTexture(TextureHandle texture, int width, int height,
+                     const void* data) override;
+  void destroyTexture(TextureHandle texture) override;
+
+  void beginFrame() override;
+  void beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
+                       const ClearValue& clear, int viewportW,
+                       int viewportH) override;
+  void bindPipeline(PipelineHandle pipeline) override;
+  void bindUniformData(int binding, const void* data, int size) override;
+  void bindTexture(int binding, TextureHandle texture) override;
+  void bindVertexBuffer(int binding, BufferHandle buffer) override;
+  void draw(int vertexCount) override;
+  void endRenderPass() override;
+  void endFrame() override;
+
+ private:
+  struct PipelineInfo {
+    GLuint program = 0;
+    // Per binding: the attributes that live in that binding's vertex buffer.
+    struct AttrInfo {
+      GLint location;
+      GLint size;  // component count (1..4)
+      int offset;
+    };
+    std::unordered_map<int, std::vector<AttrInfo>> bindingAttrs;
+    GLint samplerLocation = -1;
+    GLenum topology = GL_TRIANGLES;
+  };
+
+  std::unordered_map<GLuint, PipelineInfo> pipelines_;
+  // Track the GL target for each buffer so updateBuffer binds correctly.
+  std::unordered_map<GLuint, GLenum> bufferTargets_;
+  GLuint currentProgram_ = 0;
+  GLuint scratchUbo_ = 0;
+};
+
+}  // namespace fgfx
+
+#endif  // FGFX_BACKEND_WEBGL_BACKEND_HPP

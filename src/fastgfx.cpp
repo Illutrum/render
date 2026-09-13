@@ -6,9 +6,15 @@
 
 #include <vector>
 #include <memory>
+#include <cstdint>
 #include <fastgfx.hpp>
 #include "config.hpp"
 #include <io/FileLoader.hpp>
+#include "backend/RenderBackend.hpp"
+
+#ifdef FGFX_BACKEND_WEBGPU
+#include "backend/WebGPUBackend.hpp"
+#endif
 
 #ifndef EMSCRIPTEN
 #include <thread>
@@ -34,6 +40,9 @@ namespace fgfx {
 
 #ifdef __USE_GLFW
   GLFWwindow* glfwWindow;
+#ifdef FGFX_BACKEND_WEBGPU
+  GLFWwindow* glContextWindow;  // hidden window for GL texture loading
+#endif
 #endif
 
   namespace {
@@ -72,6 +81,11 @@ namespace fgfx {
     EM_ASM(Module.initializeFastGfxRuntime());
     fgfx_log("ENGINE INITIALIZATION\n");
     fgfx::engine = std::make_shared<fgfx::Engine>();
+#ifdef FGFX_BACKEND_WEBGPU
+    if (auto* wgpuBackend = dynamic_cast<WebGPUBackend*>(engine->getBackend())) {
+      wgpuBackend->initWasm("#fgfx_canvas", 1280, 1024);
+    }
+#endif
     EM_ASM(Module.initializeFastGfxTextureManager());
 #endif
 #ifdef __USE_GLFW
@@ -81,8 +95,11 @@ namespace fgfx {
       throw InitializationFailed();
     }
     glfwWindowHint(GLFW_ALPHA_BITS, 8);
-
     glfwWindowHint(GLFW_SAMPLES, 16);
+#ifdef FGFX_BACKEND_WEBGPU
+    // WebGPU: main window has no GL context; Dawn creates its own Vulkan surface.
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+#endif
 
     glfwWindow = glfwCreateWindow(1280, 1024, "FGFX", NULL, NULL);
     if (!glfwWindow) {
@@ -90,9 +107,23 @@ namespace fgfx {
       throw InitializationFailed();
     }
 
+#ifdef FGFX_BACKEND_WEBGPU
+    // Create a hidden GL window for texture loading (glGenTextures etc.).
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_ALPHA_BITS, 8);
+    glfwWindowHint(GLFW_SAMPLES, 16);
+    glContextWindow = glfwCreateWindow(1, 1, "FGFX-GL-Context", NULL, NULL);
+    if (!glContextWindow) {
+      fgfx_log("could not create GL context window")
+      throw InitializationFailed();
+    }
+    glfwMakeContextCurrent(glContextWindow);
+    glEnable(GL_MULTISAMPLE);
+#else
     glfwMakeContextCurrent(glfwWindow);
     glEnable(GL_MULTISAMPLE);
-
+#endif
 #ifdef __linux__
     GLenum err = glewInit();
     if (err != GLEW_OK) {
@@ -102,6 +133,14 @@ namespace fgfx {
 #endif
 
     fgfx::engine = std::make_shared<fgfx::Engine>();
+
+#ifdef FGFX_BACKEND_WEBGPU
+    // Initialize the WebGPU backend with Dawn + the GLFW window.
+    auto* wgpuBackend = dynamic_cast<WebGPUBackend*>(engine->getBackend());
+    if (wgpuBackend) {
+      wgpuBackend->initNative(glfwWindow);
+    }
+#endif
 #endif
 #ifdef __ANDROID
     fgfx::engine = std::make_shared<fgfx::Engine>();
@@ -302,6 +341,22 @@ FGFX_API
 int fgfx_Texture_getTexture(fgfx::Texture* texture) {
   if(!texture->initialized) return -1;
   return texture->texture;
+}
+
+FGFX_API
+int fgfx_createTextureRGBA(int width, int height, const uint8_t* data) {
+  if (!fgfx::engine || !fgfx::engine->getBackend() || !data || width <= 0 ||
+      height <= 0) {
+    return 0;
+  }
+  fgfx::TextureDesc desc;
+  desc.width = width;
+  desc.height = height;
+  desc.format = fgfx::PixelFormat::RGBA8Unorm;
+  desc.generateMipmaps = false;
+  fgfx::TextureHandle handle = fgfx::engine->getBackend()->createTexture(desc);
+  fgfx::engine->getBackend()->updateTexture(handle, width, height, data);
+  return static_cast<int>(handle);
 }
 
 };

@@ -3,6 +3,7 @@
 //
 
 #include "SpriteFont.hpp"
+#include "SpriteBatch.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -32,7 +33,7 @@ namespace fgfx {
     characterStruct.advance = advance;
     characters[character] = characterStruct;
   }
-  void SpriteFont::renderString(SpriteLayer* layer, const glm::mat4& mat, const glm::vec4& color,
+  void SpriteFont::renderString(SpriteBatch* layer, const glm::mat4& mat, const glm::vec4& color,
                                 const std::string& text){
     //emscripten_log(EM_LOG_ERROR,"RENDER %s STRING: %s\n",name.c_str(),text.c_str());
     float x = 0;
@@ -53,7 +54,7 @@ namespace fgfx {
     }
   }
 
-  void SpriteFont::renderSubString(SpriteLayer* layer, const glm::mat4& mat, const glm::vec4& color,
+  void SpriteFont::renderSubString(SpriteBatch* layer, const glm::mat4& mat, const glm::vec4& color,
                                    const std::string& text, int from, int count) {
     //emscripten_log(EM_LOG_ERROR,"RENDER %s STRING: %s\n",name.c_str(),text.c_str());
     float x = 0;
@@ -75,11 +76,11 @@ namespace fgfx {
     }
   }
 
-  void SpriteFont::renderString(const std::shared_ptr<SpriteLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+  void SpriteFont::renderString(const std::shared_ptr<SpriteBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                                 const std::string& text) {
     renderString(layer.get(), mat, color, text);
   }
-  void SpriteFont::renderSubString(const std::shared_ptr<SpriteLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+  void SpriteFont::renderSubString(const std::shared_ptr<SpriteBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                                    const std::string& text, int from, int count) {
     renderSubString(layer.get(), mat, color, text, from, count);
   }

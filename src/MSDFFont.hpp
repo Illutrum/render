@@ -1,7 +1,6 @@
 #ifndef FGFX_MSDFFONT_H
 #define FGFX_MSDFFONT_H
 
-#include "MSDFLayer.hpp"
 #include "SpriteFont.hpp"
 #include <glm/glm.hpp>
 #include <map>
@@ -10,6 +9,8 @@
 #include <serialization/promise.hpp>
 
 namespace fgfx {
+
+  class GlyphBatch;
 
   class MSDFFont : public std::enable_shared_from_this<MSDFFont> {
   public:
@@ -29,12 +30,12 @@ namespace fgfx {
     void setScale(float scaleW, float scaleH);
     void setCharacter(unsigned short character, std::shared_ptr<Sprite> sprite, glm::vec2 size, glm::vec2 offset, float advance);
 
-    void renderString(MSDFLayer* layer, const glm::mat4& mat, const glm::vec4& color, const std::string& text);
-    void renderSubString(MSDFLayer* layer, const glm::mat4& mat, const glm::vec4& color,
+    void renderString(GlyphBatch* layer, const glm::mat4& mat, const glm::vec4& color, const std::string& text);
+    void renderSubString(GlyphBatch* layer, const glm::mat4& mat, const glm::vec4& color,
                          const std::string& text, int from, int count);
-    void renderString(const std::shared_ptr<MSDFLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+    void renderString(const std::shared_ptr<GlyphBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                       const std::string& text);
-    void renderSubString(const std::shared_ptr<MSDFLayer>& layer, const glm::mat4& mat, const glm::vec4& color,
+    void renderSubString(const std::shared_ptr<GlyphBatch>& layer, const glm::mat4& mat, const glm::vec4& color,
                          const std::string& text, int from, int count);
 
     glm::vec2 measureString(const std::string& text);

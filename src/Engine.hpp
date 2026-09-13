@@ -5,18 +5,14 @@
 #include "MSDFFont.hpp"
 #include "Sprite.hpp"
 #include "Texture.hpp"
-#include "SpriteLayer.hpp"
-#include "MSDFLayer.hpp"
-#include "PolygonLayer.hpp"
-#include "LineLayer.hpp"
-#include "TexturedLayer.hpp"
-#include "TextureTransitionLayer.hpp"
 #include "shaders.hpp"
+#include "backend/BackendTypes.hpp"
 
 #include <map>
 #include <vector>
 #include <string>
 #include <memory>
+#include <functional>
 
 #ifndef EMSCRIPTEN
 #include "concurrentqueue.hpp"
@@ -27,6 +23,10 @@
 #endif
 
 namespace fgfx {
+
+  class RenderBackend;
+  class UniformAllocator;
+  class FrameBuilder;
 
   class Engine : public std::enable_shared_from_this<Engine> {
   protected:
@@ -53,12 +53,22 @@ namespace fgfx {
     friend class Sprite;
     friend class SpriteFont;
     friend class MSDFFont;
+    friend class SpriteBatch;
 
     std::function<void(double,float)> renderFunction;
+    std::function<void(FrameBuilder&, double, float)> sceneRenderFunction;
+
+    // Render backend abstraction (GL or WebGPU).
+    BackendType backendType = BackendType::GL;
+    std::unique_ptr<RenderBackend> backend;
+    std::unique_ptr<UniformAllocator> uniforms;
 
   public:
     double renderTime;
     float renderDelta;
+
+    // Public access to the render backend (for native init).
+    RenderBackend* getBackend() { return backend.get(); }
 
     int width;
     int height;
@@ -100,17 +110,11 @@ namespace fgfx {
     void reloadTexture(std::shared_ptr<Texture> texturep);
 
     void setRenderFunction(std::function<void(float,float)> renderFunctionp);
+    void setSceneRenderFunction(std::function<void(FrameBuilder&, double, float)> fn);
     void render(double time, float delta, int widthp, int heightp);
     void uploadTextures();
     void seedDrawTarget(int widthp, int heightp);
     void bindDrawTarget(GLint fbo, int x, int y, int w, int h);
-
-    std::shared_ptr<SpriteLayer> createSpriteLayer();
-    std::shared_ptr<MSDFLayer> createMSDFLayer();
-    std::shared_ptr<PolygonLayer> createPolygonLayer();
-    std::shared_ptr<LineLayer> createLineLayer();
-    std::shared_ptr<TexturedLayer> createTexturedLayer();
-    std::shared_ptr<TextureTransitionLayer> createTextureTransitionLayer();
 
     void upload(std::function<void()> uploadFunction);
 
@@ -118,6 +122,8 @@ namespace fgfx {
     void mainLoop();
 #endif
   };
+
+  extern std::shared_ptr<Engine> engine;
 
 };
 

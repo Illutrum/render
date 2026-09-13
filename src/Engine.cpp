@@ -1,8 +1,13 @@
 #include "Engine.hpp"
-#include "PolygonLayer.hpp"
-#include "MSDFLayer.hpp"
 #include "config.hpp"
 #include "fastgfx.hpp"
+#include "backend/RenderBackend.hpp"
+#include "backend/WebGLBackend.hpp"
+#include "backend/FrameGraph.hpp"
+#include "backend/UniformAllocator.hpp"
+#ifdef FGFX_BACKEND_WEBGPU
+#include "backend/WebGPUBackend.hpp"
+#endif
 #include <chrono>
 #include <io/FileLoader.hpp>
 
@@ -11,14 +16,15 @@ namespace fgfx {
   std::shared_ptr<Engine> engine;
 
   Engine::Engine() {
-    SpriteLayer::initializeSpriteProgram();
-    MSDFLayer::initializeMSDFProgram();
-    LineLayer::initializeLineProgram();
-    PolygonLayer::initializePolygonProgram();
-    TexturedLayer::initializeTexturedProgram();
-    TextureTransitionLayer::initializeTextureTransitionProgram();
-    NormalMappedSpriteLayer::initializeSpriteProgram();
-    PBRSpriteLayer::initializeSpriteProgram();
+    // Create the render backend.
+#ifdef FGFX_BACKEND_WEBGPU
+    backendType = BackendType::WebGPU;
+    backend = std::make_unique<WebGPUBackend>();
+#else
+    backendType = BackendType::GL;
+    backend = std::make_unique<WebGLBackend>();
+#endif
+    uniforms = std::make_unique<UniformAllocator>(*backend);
 
     width = 0;
     height = 0;
@@ -32,14 +38,9 @@ namespace fgfx {
   }
 
   Engine::~Engine() {
-    SpriteLayer::destroySpriteProgram();
-    MSDFLayer::destroyMSDFProgram();
-    LineLayer::destroyLineProgram();
-    PolygonLayer::destroyPolygonProgram();
-    TexturedLayer::destroyTexturedProgram();
-    TextureTransitionLayer::destroyTextureTransitionProgram();
-    NormalMappedSpriteLayer::destroySpriteProgram();
-    PBRSpriteLayer::destroySpriteProgram();
+    // Destroy backend after all GL resources are freed.
+    uniforms.reset();
+    backend.reset();
   }
 
   std::shared_ptr<Sprite> Engine::getEmptySprite(std::string spriteName) {
@@ -227,6 +228,10 @@ namespace fgfx {
     renderFunction = renderFunctionp;
   }
 
+  void Engine::setSceneRenderFunction(std::function<void(FrameBuilder&, double, float)> fn) {
+    sceneRenderFunction = std::move(fn);
+  }
+
   void Engine::uploadTextures() {
 #ifndef EMSCRIPTEN
     Engine::UploadTask task;
@@ -259,31 +264,27 @@ namespace fgfx {
     width = widthp;
     height = heightp;
     seedDrawTarget(widthp, heightp);
-    uploadTextures();
+#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
     checkGLError();
+#endif
+    uploadTextures();
 
     renderTime = time;
     renderDelta = delta;
-    if(renderFunction) renderFunction(time, delta);
-  }
 
-  std::shared_ptr<SpriteLayer> Engine::createSpriteLayer() {
-    return std::make_shared<SpriteLayer>(this);
-  }
-  std::shared_ptr<MSDFLayer> Engine::createMSDFLayer() {
-    return std::make_shared<MSDFLayer>(this);
-  }
-  std::shared_ptr<PolygonLayer> Engine::createPolygonLayer() {
-    return std::make_shared<PolygonLayer>(this);
-  }
-  std::shared_ptr<LineLayer> Engine::createLineLayer() {
-    return std::make_shared<LineLayer>(this);
-  }
-  std::shared_ptr<TexturedLayer> Engine::createTexturedLayer() {
-    return std::make_shared<TexturedLayer>(this);
-  }
-  std::shared_ptr<TextureTransitionLayer> Engine::createTextureTransitionLayer() {
-    return std::make_shared<TextureTransitionLayer>(this);
+    // Tick (asset manager / input) then scene through the render graph.
+    if (renderFunction) renderFunction(time, delta);
+
+    // New path: scene renders through the render graph.
+    if (sceneRenderFunction) {
+      FrameBuilder builder(*backend, kNullTexture, widthp, heightp);
+      builder.context().time = time;
+      builder.context().delta = delta;
+      builder.context().backend = backend.get();
+      sceneRenderFunction(builder, time, delta);
+      FrameGraph graph = builder.build();
+      graph.execute(*backend);
+    }
   }
 
   void Engine::upload(std::function<void()> uploadFunction) {
@@ -296,14 +297,22 @@ namespace fgfx {
 
 #ifdef __USE_GLFW
   void Engine::mainLoop() {
+#ifndef FGFX_BACKEND_WEBGPU
+    // GL backend: main window has the GL context.
     glfwMakeContextCurrent(glfwWindow);
+#else
+    // WebGPU backend: use hidden GL window for texture loading.
+    glfwMakeContextCurrent(glContextWindow);
+#endif
 
     double lastTime = glfwGetTime() * 1000.0;
     while (!glfwWindowShouldClose(glfwWindow)) {
       double now = glfwGetTime() * 1000.0;
       double delta = now - lastTime;
       glfwGetFramebufferSize(glfwWindow, &width, &height);
+#ifndef FGFX_BACKEND_WEBGPU
       glViewport(0, 0, width, height);
+#endif
       seedDrawTarget(width, height);
       int w, h;
       glfwGetWindowSize(glfwWindow, &w, &h);
@@ -311,7 +320,10 @@ namespace fgfx {
       realHeight = 0.264 * h; // pixels to mm
       render(now, delta, width, height);
       lastTime = now;
+#ifndef FGFX_BACKEND_WEBGPU
+      // GL presents via swap; WebGPU presents via surface.present() in endFrame().
       glfwSwapBuffers(glfwWindow);
+#endif
       glfwPollEvents();
     }
   }

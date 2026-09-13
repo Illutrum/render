@@ -11,6 +11,9 @@ namespace fgfx {
     texture = -1;
     framebuffer = -1;
     unloaded = false;
+    initialized = false;
+    loadPromise = nullptr;
+#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
     GLuint tex;
     glGenTextures(1, &tex);
     unsigned char zeros[4] = {0, 0, 0, 0};
@@ -18,7 +21,7 @@ namespace fgfx {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, zeros);
     texture = tex;
     initialized = true;
-    loadPromise = nullptr;
+#endif
   };
   Texture::Texture(std::string namep, GLuint tex) : name(namep) {
     texture = -1;
@@ -33,26 +36,32 @@ namespace fgfx {
     texture = -1;
     framebuffer = -1;
     unloaded = false;
+    initialized = false;
+    loadPromise = nullptr;
+#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
     GLuint tex;
     glGenTextures(1, &tex);
     texture = tex;
     initialized = true;
-    loadPromise = nullptr;
+#endif
   };
 
   Texture::Texture(bool initialize) {
     texture = -1;
     framebuffer = -1;
     unloaded = false;
+    initialized = false;
+    loadPromise = nullptr;
+#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
     if(initialize) {
       GLuint tex;
       glGenTextures(1, &tex);
       texture = tex;
       initialized = true;
-    } else {
-      initialized = false;
     }
-    loadPromise = nullptr;
+#else
+    (void)initialize;
+#endif
   };
 
   Texture::Texture(int widthp, int heightp, GLint internalFormatp, GLenum formatp, GLenum typep, GLuint tex) {
@@ -149,9 +158,12 @@ namespace fgfx {
   }
 
   Texture::~Texture() {
-    GLuint tex = texture;
-    glDeleteTextures(1, &tex);
-
+#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
+    if (texture >= 0) {
+      GLuint tex = texture;
+      glDeleteTextures(1, &tex);
+    }
+#endif
   }
 
 }
