@@ -23,6 +23,9 @@
 #  include <webgpu/webgpu-raii.hpp>
 #endif
 
+#include <cstdint>
+#include <functional>
+#include <unordered_map>
 #include <vector>
 
 struct GLFWwindow;
@@ -35,6 +38,14 @@ class WebGPUBackend : public RenderBackend {
   ~WebGPUBackend() override;
 
   BackendType type() const override { return BackendType::WebGPU; }
+  bool supports(Feature feature) const override {
+    switch (feature) {
+      case Feature::Compute:
+      case Feature::StorageTexture:
+      case Feature::RasterizeToTexture: return true;
+    }
+    return false;
+  }
 
 #ifdef EMSCRIPTEN
   void initWasm(const char* canvasSelector, int width, int height);
@@ -76,7 +87,11 @@ class WebGPUBackend : public RenderBackend {
                        const ClearValue& clear, int viewportW,
                        int viewportH) override;
   void bindPipeline(PipelineHandle pipeline) override;
-  void bindUniformData(int binding, const void* data, int size) override;
+  uint32_t uniformRingCapacity() const override;
+  uint32_t uniformRingAlignment() const override;
+  void uploadToUniformRing(uint32_t offset, const void* data, int size) override;
+  void resetUniformRing() override;
+  void bindUniformData(int binding, uint32_t offset, int size) override;
   void bindTexture(int binding, TextureHandle texture) override;
   void bindVertexBuffer(int binding, BufferHandle buffer) override;
   void draw(int vertexCount) override;
@@ -128,12 +143,35 @@ class WebGPUBackend : public RenderBackend {
   wgpu::raii::TextureView currentBackbufferView_;
   PipelineInfo* currentPipeline_ = nullptr;
 
-  // Texture pending for the next bind group (set by bindTexture, used by draw).
+  // Texture / uniform offset pending for the next bind group.
   size_t pendingTexture_ = 0;
+  uint32_t pendingUniformOffset_ = 0;
 
-  // Scratch uniform buffer for bindUniformData.
+  // Ring uniform buffer (replaces per-draw scratch UBO).
   wgpu::raii::Buffer scratchUniformBuffer_;
-  int scratchUniformSize_ = 0;
+  uint32_t uniformRingCapacity_ = 1u << 20;
+
+  struct BindGroupKey {
+    WGPUBindGroupLayout layout = nullptr;
+    uint32_t uniformOffset = 0;
+    TextureHandle texture = kNullTexture;
+    bool operator==(const BindGroupKey& o) const {
+      return layout == o.layout && uniformOffset == o.uniformOffset &&
+             texture == o.texture;
+    }
+  };
+  struct BindGroupKeyHash {
+    size_t operator()(const BindGroupKey& k) const {
+      size_t h = std::hash<uintptr_t>{}(reinterpret_cast<uintptr_t>(k.layout));
+      h ^= std::hash<uint32_t>{}(k.uniformOffset) + 0x9e3779b9 + (h << 6) +
+           (h >> 2);
+      h ^= std::hash<uint32_t>{}(k.texture) + 0x9e3779b9 + (h << 6) + (h >> 2);
+      return h;
+    }
+  };
+  std::unordered_map<BindGroupKey, wgpu::raii::BindGroup, BindGroupKeyHash>
+      bindGroupCache_;
+  static constexpr size_t kMaxBindGroupCache = 256;
 
   // Default sampler (created once, reused for all draw calls).
   wgpu::raii::Sampler defaultSampler_;

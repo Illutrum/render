@@ -308,6 +308,8 @@ void GlyphBatch::record(RenderPass& pass, FrameContext& ctx) {
   ubo.pxRange = pxRange_;
   ubo.pad = 0.0f;
   ubo.atlasSize = atlasSize_;
+  uint32_t uniformOffset =
+      ctx.uniforms->alloc(&ubo, static_cast<int>(sizeof(ubo)));
 
   for (auto& buf : buffers_) {
     if (buf.pointCount == 0) continue;
@@ -346,8 +348,8 @@ void GlyphBatch::record(RenderPass& pass, FrameContext& ctx) {
     DrawCall dc;
     dc.pipeline = pipeline_;
     dc.uniformBinding = 0;
-    dc.uniformSize = static_cast<int>(sizeof(MsdfUbo));
-    std::memcpy(dc.uniformData.data(), &ubo, sizeof(MsdfUbo));
+    dc.uniformOffset = uniformOffset;
+    dc.uniformSize = static_cast<uint16_t>(sizeof(MsdfUbo));
     dc.textureBinding = 0;
     dc.texture = static_cast<TextureHandle>(buf.textureId);
     dc.vertexBuffers.push_back({0, buf.positionBuf});

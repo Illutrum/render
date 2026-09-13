@@ -11,6 +11,7 @@
 #include "RenderBackend.hpp"
 #include "../config.hpp"
 
+#include <array>
 #include <unordered_map>
 #include <vector>
 
@@ -22,6 +23,14 @@ class WebGLBackend : public RenderBackend {
   ~WebGLBackend() override;
 
   BackendType type() const override { return BackendType::GL; }
+  bool supports(Feature feature) const override {
+    switch (feature) {
+      case Feature::RasterizeToTexture: return true;
+      case Feature::Compute:
+      case Feature::StorageTexture: return false;
+    }
+    return false;
+  }
 
   PipelineHandle createPipeline(const PipelineDesc& desc) override;
   void destroyPipeline(PipelineHandle pipeline) override;
@@ -45,7 +54,11 @@ class WebGLBackend : public RenderBackend {
                        const ClearValue& clear, int viewportW,
                        int viewportH) override;
   void bindPipeline(PipelineHandle pipeline) override;
-  void bindUniformData(int binding, const void* data, int size) override;
+  uint32_t uniformRingCapacity() const override;
+  uint32_t uniformRingAlignment() const override;
+  void uploadToUniformRing(uint32_t offset, const void* data, int size) override;
+  void resetUniformRing() override;
+  void bindUniformData(int binding, uint32_t offset, int size) override;
   void bindTexture(int binding, TextureHandle texture) override;
   void bindVertexBuffer(int binding, BufferHandle buffer) override;
   void draw(int vertexCount) override;
@@ -75,6 +88,11 @@ class WebGLBackend : public RenderBackend {
   int stencilH_ = 0;
   GLuint currentProgram_ = 0;
   GLuint scratchUbo_ = 0;
+  mutable uint32_t uboAlignment_ = 256;
+  mutable bool uboAlignQueried_ = false;
+  std::array<TextureHandle, 16> lastTexture_{};
+
+  void ensureUniformRing();
 };
 
 }  // namespace fgfx

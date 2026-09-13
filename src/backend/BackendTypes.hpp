@@ -13,6 +13,26 @@ namespace fgfx {
 
 enum class BackendType { GL, WebGPU };
 
+enum class Feature : uint32_t {
+  Compute            = 1u << 0,
+  StorageTexture     = 1u << 1,
+  RasterizeToTexture = 1u << 2,
+};
+using FeatureSet = uint32_t;
+
+constexpr FeatureSet featureBit(Feature f) { return static_cast<uint32_t>(f); }
+constexpr bool hasFeature(FeatureSet set, Feature f) {
+  return (set & featureBit(f)) != 0;
+}
+inline const char* featureName(Feature f) {
+  switch (f) {
+    case Feature::Compute: return "Compute";
+    case Feature::StorageTexture: return "StorageTexture";
+    case Feature::RasterizeToTexture: return "RasterizeToTexture";
+  }
+  return "Unknown";
+}
+
 // Opaque resource handles. 0 == null.
 using TextureHandle = uint32_t;
 using BufferHandle = uint32_t;
@@ -88,6 +108,7 @@ struct PipelineDesc {
   int uniformSize = 64;
   // When false, bind group is uniform-only (no sampled texture).
   bool hasTexture = true;
+  FeatureSet requiredFeatures = 0;
 };
 
 struct TextureDesc {

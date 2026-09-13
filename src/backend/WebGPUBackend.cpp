@@ -178,13 +178,12 @@ void WebGPUBackend::initWithDevice(wgpu::Instance instance,
   samplerDesc.addressModeW = WGPUAddressMode_ClampToEdge;
   defaultSampler_ = device.createSampler(samplerDesc);
 
-  // Scratch uniform buffer (256 bytes, resizable).
+  // Uniform ring buffer (frame-allocated UBO).
   WGPUBufferDescriptor uboDesc = {};
   uboDesc.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-  uboDesc.size = 256;
+  uboDesc.size = uniformRingCapacity_;
   uboDesc.mappedAtCreation = false;
   scratchUniformBuffer_ = device.createBuffer(uboDesc);
-  scratchUniformSize_ = 256;
 }
 
 void WebGPUBackend::reconfigureSurface(int width, int height) {
@@ -204,6 +203,10 @@ void WebGPUBackend::reconfigureSurface(int width, int height) {
 }
 
 PipelineHandle WebGPUBackend::createPipeline(const PipelineDesc& desc) {
+  if (!supportsAll(desc.requiredFeatures)) {
+    fgfx_log("createPipeline rejected: missing required features");
+    return kNullPipeline;
+  }
   PipelineInfo info;
   info.uniformSize = desc.uniformSize > 0 ? desc.uniformSize : 64;
   info.hasTexture = desc.hasTexture;
@@ -434,6 +437,9 @@ void WebGPUBackend::destroyTexture(TextureHandle texture) {
 }
 
 void WebGPUBackend::beginFrame() {
+  bindGroupCache_.clear();
+  resetUniformRing();
+  currentPipeline_ = nullptr;
 #ifdef EMSCRIPTEN
   if (engine && engine->width > 0 && engine->height > 0 &&
       (engine->width != surfaceWidth_ || engine->height != surfaceHeight_)) {
@@ -501,30 +507,46 @@ void WebGPUBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
   passEncoder_ = commandEncoder_->beginRenderPass(rpDesc);
   passEncoder_->setViewport(0, 0, static_cast<float>(viewportW),
                               static_cast<float>(viewportH), 0.0f, 1.0f);
+  currentPipeline_ = nullptr;
 }
 
 void WebGPUBackend::bindPipeline(PipelineHandle pipeline) {
   if (!passEncoder_) return;
   auto idx = static_cast<size_t>(pipeline);
-  currentPipeline_ = &pipelines_[idx];
+  PipelineInfo* next = &pipelines_[idx];
+  if (currentPipeline_ == next) {
+    return;
+  }
+  currentPipeline_ = next;
   WGPURenderPipeline p = *currentPipeline_->pipeline;
   passEncoder_->setPipeline(p);
 }
 
-void WebGPUBackend::bindUniformData(int binding, const void* data, int size) {
-  if (size > scratchUniformSize_) {
-    WGPUBufferDescriptor bd = WGPU_BUFFER_DESCRIPTOR_INIT;
-    bd.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
-    bd.size = static_cast<uint64_t>(size);
-    bd.mappedAtCreation = false;
-    scratchUniformBuffer_ = device_.createBuffer(bd);
-    scratchUniformSize_ = size;
+uint32_t WebGPUBackend::uniformRingCapacity() const {
+  return uniformRingCapacity_;
+}
+
+uint32_t WebGPUBackend::uniformRingAlignment() const { return 256; }
+
+void WebGPUBackend::uploadToUniformRing(uint32_t offset, const void* data,
+                                        int size) {
+  if (!data || size <= 0 || !scratchUniformBuffer_) {
+    return;
   }
-  queue_.writeBuffer(*scratchUniformBuffer_, 0, data,
-                      static_cast<size_t>(size));
+  queue_.writeBuffer(*scratchUniformBuffer_, offset, data,
+                     static_cast<size_t>(size));
+}
+
+void WebGPUBackend::resetUniformRing() {}
+
+void WebGPUBackend::bindUniformData(int binding, uint32_t offset, int size) {
+  (void)binding;
+  (void)size;
+  pendingUniformOffset_ = offset;
 }
 
 void WebGPUBackend::bindTexture(int binding, TextureHandle texture) {
+  (void)binding;
   pendingTexture_ = static_cast<size_t>(texture);
 }
 
@@ -545,14 +567,16 @@ void WebGPUBackend::draw(int vertexCount) {
   };
   bgEntries[0].binding = 0;
   bgEntries[0].buffer = *scratchUniformBuffer_;
-  bgEntries[0].offset = 0;
+  bgEntries[0].offset = pendingUniformOffset_;
   bgEntries[0].size = static_cast<uint64_t>(currentPipeline_->uniformSize);
   uint32_t entryCount = 1;
+  TextureHandle textureKey = kNullTexture;
   if (currentPipeline_->hasTexture) {
     if (pendingTexture_ >= textures_.size() ||
         !*textures_[pendingTexture_].view) {
       return;
     }
+    textureKey = static_cast<TextureHandle>(pendingTexture_);
     bgEntries[1].binding = 1;
     bgEntries[1].textureView = *textures_[pendingTexture_].view;
     bgEntries[2].binding = 2;
@@ -560,12 +584,27 @@ void WebGPUBackend::draw(int vertexCount) {
     entryCount = 3;
   }
 
-  WGPUBindGroupDescriptor bgDesc = WGPU_BIND_GROUP_DESCRIPTOR_INIT;
-  WGPUBindGroupLayout bgl = *currentPipeline_->bindGroupLayout;
-  bgDesc.layout = bgl;
-  bgDesc.entryCount = entryCount;
-  bgDesc.entries = bgEntries;
-  wgpu::BindGroup bindGroup = device_.createBindGroup(bgDesc);
+  BindGroupKey key;
+  key.layout = *currentPipeline_->bindGroupLayout;
+  key.uniformOffset = pendingUniformOffset_;
+  key.texture = textureKey;
+  if (bindGroupCache_.size() > kMaxBindGroupCache) {
+    fgfx_log("WebGPU: bind group cache overflow, clearing");
+    bindGroupCache_.clear();
+  }
+  wgpu::BindGroup bindGroup;
+  auto it = bindGroupCache_.find(key);
+  if (it != bindGroupCache_.end()) {
+    bindGroup = *it->second;
+  } else {
+    WGPUBindGroupDescriptor bgDesc = WGPU_BIND_GROUP_DESCRIPTOR_INIT;
+    bgDesc.layout = key.layout;
+    bgDesc.entryCount = entryCount;
+    bgDesc.entries = bgEntries;
+    wgpu::raii::BindGroup created = device_.createBindGroup(bgDesc);
+    bindGroup = *created;
+    bindGroupCache_.emplace(key, std::move(created));
+  }
 
   passEncoder_->setBindGroup(0, bindGroup, 0, nullptr);
   passEncoder_->draw(static_cast<uint32_t>(vertexCount), 1, 0, 0);
@@ -575,6 +614,7 @@ void WebGPUBackend::endRenderPass() {
   if (!passEncoder_) return;
   passEncoder_->end();
   passEncoder_ = {};
+  currentPipeline_ = nullptr;
 }
 
 void WebGPUBackend::endFrame() {

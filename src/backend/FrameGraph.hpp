@@ -1,19 +1,23 @@
 // FrameGraph: the declarative render graph data structures + immediate
-// executor. For the spike there is no topological sort, barrier tracking, or
-// transient allocation — passes execute in the order they were recorded.
-// Those features arrive in Phase 10.
+// executor. Passes execute in the order they were recorded. Topological sort,
+// barrier tracking, and transient allocation are later work.
 
 #ifndef FGFX_BACKEND_FRAME_GRAPH_HPP
 #define FGFX_BACKEND_FRAME_GRAPH_HPP
 
 #include "BackendTypes.hpp"
 #include "RenderBackend.hpp"
+#include "UniformAllocator.hpp"
+#include "../config.hpp"
 
 #include <glm/glm.hpp>
-#include <array>
+#include <algorithm>
 #include <functional>
-#include <vector>
+#include <sstream>
 #include <string>
+#include <tuple>
+#include <unordered_set>
+#include <vector>
 
 namespace fgfx {
 
@@ -28,20 +32,15 @@ struct ModelViewProjection {
   }
 };
 
-// A single draw call. For the spike: one pipeline, one uniform data blob
-// (camera matrix at binding 0), one texture (binding 0), up to a few vertex
-// buffers keyed by binding index.
+// A single draw call. Uniforms live in the backend ring buffer; DrawCall
+// stores the offset. Texture at binding 0 is the sprite atlas.
 struct DrawCall {
   PipelineHandle pipeline = kNullPipeline;
-  // Uniform data (copied into the draw call; binding 0 = camera matrix).
-  static constexpr int kMaxUniformData = 256;
   int uniformBinding = 0;
-  int uniformSize = 0;
-  std::array<uint8_t, kMaxUniformData> uniformData{};
-  // Texture (binding 0 = sprite atlas).
+  uint32_t uniformOffset = 0;
+  uint16_t uniformSize = 0;
   int textureBinding = 0;
   TextureHandle texture = kNullTexture;
-  // Vertex buffers keyed by binding index.
   std::vector<std::pair<int, BufferHandle>> vertexBuffers;
   int vertexCount = 0;
 };
@@ -58,6 +57,13 @@ struct RenderPass {
   std::vector<DrawCall> drawCalls;
   PassKind kind = PassKind::Render;
   std::function<void(RenderBackend&)> externalCallback;
+  FeatureSet requiredFeatures = 0;
+  bool opaque = false;
+  // Named `require` because `requires` is a C++20 keyword.
+  RenderPass& require(Feature f) {
+    requiredFeatures |= featureBit(f);
+    return *this;
+  }
 };
 
 // Context handed to batches during recording.
@@ -66,7 +72,35 @@ struct FrameContext {
   double time = 0.0;
   float delta = 0.0f;
   RenderBackend* backend = nullptr;
+  UniformAllocator* uniforms = nullptr;
 };
+
+inline std::string missingFeatureNames(const RenderBackend& backend,
+                                       FeatureSet set) {
+  std::string out;
+  auto append = [&](Feature f) {
+    if (hasFeature(set, f) && !backend.supports(f)) {
+      if (!out.empty()) out += ", ";
+      out += featureName(f);
+    }
+  };
+  append(Feature::Compute);
+  append(Feature::StorageTexture);
+  append(Feature::RasterizeToTexture);
+  return out;
+}
+
+inline void logUnsupportedPass(const std::string& name, FeatureSet set,
+                               const RenderBackend& backend) {
+  static std::unordered_set<std::string> logged;
+  if (!logged.insert(name).second) {
+    return;
+  }
+  std::ostringstream msg;
+  msg << "FrameGraph: skip pass \"" << name << "\" (missing "
+      << missingFeatureNames(backend, set) << ")";
+  fgfx_log("%s", msg.str().c_str());
+}
 
 // FrameGraph: the recorded passes, executed immediately against a backend.
 class FrameGraph {
@@ -74,6 +108,10 @@ class FrameGraph {
   void execute(RenderBackend& backend) {
     backend.beginFrame();
     for (auto& pass : passes_) {
+      if (!backend.supportsAll(pass.requiredFeatures)) {
+        logUnsupportedPass(pass.name, pass.requiredFeatures, backend);
+        continue;
+      }
       if (pass.kind == PassKind::External) {
         if (pass.externalCallback) {
           pass.externalCallback(backend);
@@ -82,10 +120,21 @@ class FrameGraph {
       }
       backend.beginRenderPass(pass.colorTarget, pass.loadOp, pass.clear,
                                pass.viewportW, pass.viewportH);
+      if (pass.opaque) {
+        std::stable_sort(
+            pass.drawCalls.begin(), pass.drawCalls.end(),
+            [](const DrawCall& a, const DrawCall& b) {
+              return std::tie(a.pipeline, a.texture) <
+                     std::tie(b.pipeline, b.texture);
+            });
+      }
       for (auto& dc : pass.drawCalls) {
+        if (dc.pipeline == kNullPipeline) {
+          continue;
+        }
         backend.bindPipeline(dc.pipeline);
         if (dc.uniformSize > 0) {
-          backend.bindUniformData(dc.uniformBinding, dc.uniformData.data(),
+          backend.bindUniformData(dc.uniformBinding, dc.uniformOffset,
                                   dc.uniformSize);
         }
         if (dc.texture != kNullTexture) {
@@ -109,14 +158,18 @@ class FrameGraph {
 // FrameBuilder: fluent API used by the scene render function to record passes.
 class FrameBuilder {
  public:
-  FrameBuilder(RenderBackend& backend, TextureHandle surfaceColor, int vpW,
-               int vpH)
+  FrameBuilder(RenderBackend& backend, UniformAllocator& uniforms,
+               TextureHandle surfaceColor, int vpW, int vpH)
       : backend_(&backend),
         surfaceColor_(surfaceColor),
         viewportW_(vpW),
-        viewportH_(vpH) {}
+        viewportH_(vpH) {
+    context_.backend = &backend;
+    context_.uniforms = &uniforms;
+  }
 
   TextureHandle surfaceColor() const { return surfaceColor_; }
+  RenderBackend& backend() { return *backend_; }
 
   RenderPass& beginPass(const std::string& name, TextureHandle colorTarget,
                         LoadOp loadOp, const ClearValue& clear) {

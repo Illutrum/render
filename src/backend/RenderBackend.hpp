@@ -14,6 +14,21 @@ class RenderBackend {
   virtual ~RenderBackend() = default;
 
   virtual BackendType type() const = 0;
+  virtual bool supports(Feature feature) const = 0;
+  bool supportsAll(FeatureSet set) const {
+    if (hasFeature(set, Feature::Compute) && !supports(Feature::Compute)) {
+      return false;
+    }
+    if (hasFeature(set, Feature::StorageTexture) &&
+        !supports(Feature::StorageTexture)) {
+      return false;
+    }
+    if (hasFeature(set, Feature::RasterizeToTexture) &&
+        !supports(Feature::RasterizeToTexture)) {
+      return false;
+    }
+    return true;
+  }
 
   // --- Resource creation -------------------------------------------------
   virtual PipelineHandle createPipeline(const PipelineDesc& desc) = 0;
@@ -31,12 +46,18 @@ class RenderBackend {
   // --- Frame / pass -------------------------------------------------------
   // colorTarget == kNullTexture means the surface (default framebuffer /
   // swapchain backbuffer).
+  virtual uint32_t uniformRingCapacity() const = 0;
+  virtual uint32_t uniformRingAlignment() const = 0;
+  virtual void uploadToUniformRing(uint32_t offset, const void* data,
+                                   int size) = 0;
+  virtual void resetUniformRing() = 0;
+
   virtual void beginFrame() = 0;
   virtual void beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                                const ClearValue& clear, int viewportW,
                                int viewportH) = 0;
   virtual void bindPipeline(PipelineHandle pipeline) = 0;
-  virtual void bindUniformData(int binding, const void* data, int size) = 0;
+  virtual void bindUniformData(int binding, uint32_t offset, int size) = 0;
   virtual void bindTexture(int binding, TextureHandle texture) = 0;
   virtual void bindVertexBuffer(int binding, BufferHandle buffer) = 0;
   virtual void draw(int vertexCount) = 0;

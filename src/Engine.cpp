@@ -260,7 +260,8 @@ namespace fgfx {
 
     // New path: scene renders through the render graph.
     if (sceneRenderFunction) {
-      FrameBuilder builder(*backend, kNullTexture, widthp, heightp);
+      uniforms->reset();
+      FrameBuilder builder(*backend, *uniforms, kNullTexture, widthp, heightp);
       builder.context().time = time;
       builder.context().delta = delta;
       builder.context().backend = backend.get();

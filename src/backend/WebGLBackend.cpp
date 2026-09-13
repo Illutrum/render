@@ -62,6 +62,10 @@ WebGLBackend::~WebGLBackend() {
 }
 
 PipelineHandle WebGLBackend::createPipeline(const PipelineDesc& desc) {
+  if (!supportsAll(desc.requiredFeatures)) {
+    fgfx_log("createPipeline rejected: missing required features");
+    return kNullPipeline;
+  }
   GLuint vs = loadShader(GL_VERTEX_SHADER, desc.vertexGLSL);
   GLuint fs = loadShader(GL_FRAGMENT_SHADER, desc.fragmentGLSL);
   GLuint prog = createProgram(vs, fs);
@@ -215,7 +219,7 @@ void WebGLBackend::unbindColorTarget() {
 }
 
 void WebGLBackend::beginFrame() {
-  // GL is immediate-mode; nothing to do.
+  resetUniformRing();
 }
 
 void WebGLBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
@@ -228,10 +232,15 @@ void WebGLBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
     glClearColor(clear.r, clear.g, clear.b, clear.a);
     glClear(GL_COLOR_BUFFER_BIT);
   }
+  currentProgram_ = 0;
+  lastTexture_.fill(~TextureHandle{0});
 }
 
 void WebGLBackend::bindPipeline(PipelineHandle pipeline) {
   GLuint prog = static_cast<GLuint>(pipeline);
+  if (currentProgram_ == prog) {
+    return;
+  }
   glUseProgram(prog);
   currentProgram_ = prog;
   auto it = pipelines_.find(prog);
@@ -248,18 +257,62 @@ void WebGLBackend::bindPipeline(PipelineHandle pipeline) {
   }
 }
 
-void WebGLBackend::bindUniformData(int binding, const void* data, int size) {
-  if (binding != 0 || !data || size <= 0) return;
-  if (!scratchUbo_) {
-    glGenBuffers(1, &scratchUbo_);
+uint32_t WebGLBackend::uniformRingCapacity() const { return 1u << 20; }
+
+uint32_t WebGLBackend::uniformRingAlignment() const {
+  if (!uboAlignQueried_) {
+    GLint align = 256;
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &align);
+    if (align <= 0) {
+      align = 256;
+    }
+    uboAlignment_ = static_cast<uint32_t>(align);
+    uboAlignQueried_ = true;
   }
+  return uboAlignment_;
+}
+
+void WebGLBackend::ensureUniformRing() {
+  if (scratchUbo_) {
+    return;
+  }
+  glGenBuffers(1, &scratchUbo_);
   glBindBuffer(GL_UNIFORM_BUFFER, scratchUbo_);
-  glBufferData(GL_UNIFORM_BUFFER, size, data, GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_UNIFORM_BUFFER, 0, scratchUbo_);
+  glBufferData(GL_UNIFORM_BUFFER, static_cast<GLsizeiptr>(uniformRingCapacity()),
+               nullptr, GL_DYNAMIC_DRAW);
   glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
+void WebGLBackend::uploadToUniformRing(uint32_t offset, const void* data,
+                                       int size) {
+  if (!data || size <= 0) {
+    return;
+  }
+  ensureUniformRing();
+  glBindBuffer(GL_UNIFORM_BUFFER, scratchUbo_);
+  glBufferSubData(GL_UNIFORM_BUFFER, static_cast<GLintptr>(offset), size, data);
+  glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+void WebGLBackend::resetUniformRing() {}
+
+void WebGLBackend::bindUniformData(int binding, uint32_t offset, int size) {
+  if (size <= 0) {
+    return;
+  }
+  ensureUniformRing();
+  glBindBufferRange(GL_UNIFORM_BUFFER, static_cast<GLuint>(binding), scratchUbo_,
+                    static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size));
+}
+
 void WebGLBackend::bindTexture(int binding, TextureHandle texture) {
+  if (binding < 0 || binding >= static_cast<int>(lastTexture_.size())) {
+    return;
+  }
+  if (lastTexture_[static_cast<size_t>(binding)] == texture) {
+    return;
+  }
+  lastTexture_[static_cast<size_t>(binding)] = texture;
   glActiveTexture(GL_TEXTURE0 + binding);
   glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
 }
@@ -293,6 +346,7 @@ void WebGLBackend::endRenderPass() {
       }
     }
   }
+  currentProgram_ = 0;
 }
 
 void WebGLBackend::endFrame() {

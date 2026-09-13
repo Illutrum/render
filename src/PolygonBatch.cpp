@@ -179,8 +179,8 @@ void PolygonBatch::record(RenderPass& pass, FrameContext& ctx) {
   DrawCall dc;
   dc.pipeline = pipeline_;
   dc.uniformBinding = 0;
-  dc.uniformSize = sizeof(glm::mat4);
-  std::memcpy(dc.uniformData.data(), &mvp, sizeof(glm::mat4));
+  dc.uniformOffset = ctx.uniforms->alloc(&mvp, static_cast<int>(sizeof(mvp)));
+  dc.uniformSize = static_cast<uint16_t>(sizeof(glm::mat4));
   dc.texture = kNullTexture;
   dc.vertexBuffers.push_back({0, positionBuf_});
   dc.vertexBuffers.push_back({1, colorBuf_});
