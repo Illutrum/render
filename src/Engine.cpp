@@ -28,17 +28,15 @@ namespace fgfx {
 
     width = 0;
     height = 0;
-    boundFramebuffer = 0;
-    viewportX = 0;
-    viewportY = 0;
-    viewportW = 0;
-    viewportH = 0;
 
     renderTime = 0;
   }
 
   Engine::~Engine() {
-    // Destroy backend after all GL resources are freed.
+    textures.clear();
+    sprites.clear();
+    spriteFonts.clear();
+    msdfFonts.clear();
     uniforms.reset();
     backend.reset();
   }
@@ -123,8 +121,10 @@ namespace fgfx {
     textures[textureName] = texture;
     return texture;
   }
-  std::shared_ptr<Texture> Engine::createEmptyTexture(int width, int height, GLint internalFormat, GLenum format, GLenum type) {
-    return std::make_shared<Texture>(width, height, internalFormat, format, type);
+  std::shared_ptr<Texture> Engine::createEmptyTexture(int width, int height, PixelFormat format) {
+    auto texture = std::make_shared<Texture>();
+    texture->recreate(width, height, format);
+    return texture;
   }
 
   std::shared_ptr<SpriteFont> Engine::getSpriteFont(std::string spriteFontName) {
@@ -237,34 +237,17 @@ namespace fgfx {
     Engine::UploadTask task;
     while (fgfx::engine->uploadQueue.try_dequeue(task)) {
       task();
+#ifndef FGFX_BACKEND_WEBGPU
       checkGLError();
+#endif
     }
 #endif
-  }
-
-  void Engine::seedDrawTarget(int widthp, int heightp) {
-    boundFramebuffer = 0;
-    viewportX = 0;
-    viewportY = 0;
-    viewportW = widthp;
-    viewportH = heightp;
-  }
-
-  void Engine::bindDrawTarget(GLint fbo, int x, int y, int w, int h) {
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glViewport(x, y, w, h);
-    boundFramebuffer = fbo;
-    viewportX = x;
-    viewportY = y;
-    viewportW = w;
-    viewportH = h;
   }
 
   void Engine::render(double time, float delta, int widthp, int heightp) {
     width = widthp;
     height = heightp;
-    seedDrawTarget(widthp, heightp);
-#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
+#ifndef FGFX_BACKEND_WEBGPU
     checkGLError();
 #endif
     uploadTextures();
@@ -298,11 +281,7 @@ namespace fgfx {
 #ifdef __USE_GLFW
   void Engine::mainLoop() {
 #ifndef FGFX_BACKEND_WEBGPU
-    // GL backend: main window has the GL context.
     glfwMakeContextCurrent(glfwWindow);
-#else
-    // WebGPU backend: use hidden GL window for texture loading.
-    glfwMakeContextCurrent(glContextWindow);
 #endif
 
     double lastTime = glfwGetTime() * 1000.0;
@@ -310,10 +289,6 @@ namespace fgfx {
       double now = glfwGetTime() * 1000.0;
       double delta = now - lastTime;
       glfwGetFramebufferSize(glfwWindow, &width, &height);
-#ifndef FGFX_BACKEND_WEBGPU
-      glViewport(0, 0, width, height);
-#endif
-      seedDrawTarget(width, height);
       int w, h;
       glfwGetWindowSize(glfwWindow, &w, &h);
       realWidth = 0.264 * w; // pixels to mm

@@ -72,7 +72,6 @@ namespace fgfx {
   }
 
   static GLuint createAtlasTexture(const std::shared_ptr<Image>& image, bool mipmaps) {
-#ifdef FGFX_BACKEND_WEBGPU
     TextureDesc desc;
     desc.width = image->width;
     desc.height = image->height;
@@ -82,20 +81,6 @@ namespace fgfx {
     engine->getBackend()->updateTexture(handle, image->width, image->height,
                                         image->data);
     return static_cast<GLuint>(handle);
-#else
-    GLuint texture = 0;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                    mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, image->data);
-    if (mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
-    return texture;
-#endif
   }
 
   static void uploadMSDFFontGlyph(std::shared_ptr<MSDFFont> font, std::shared_ptr<Image> image, GLuint texture,
@@ -269,7 +254,20 @@ namespace fgfx {
   void TextureManager::loadTexture(std::shared_ptr<Texture> texture, std::shared_ptr<Image> image) {
     if(texture->name.size() == 0 ) throw ImageNotFoundError();
     fgfx::engine->uploadQueue.enqueue([=]{
-      texture->upload(image->width, image->height, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
+      TextureDesc desc;
+      desc.width = image->width;
+      desc.height = image->height;
+      desc.format = PixelFormat::RGBA8Unorm;
+      desc.generateMipmaps = true;
+      auto* be = engine->getBackend();
+      if (texture->texture < 0) {
+        texture->texture = static_cast<int>(be->createTexture(desc));
+      }
+      be->updateTexture(texture->handle(), image->width, image->height, image->data);
+      texture->width = image->width;
+      texture->height = image->height;
+      texture->format = PixelFormat::RGBA8Unorm;
+      texture->initialized = true;
     });
   }
 

@@ -72,11 +72,6 @@ namespace fgfx {
 
     int width;
     int height;
-    GLint boundFramebuffer;
-    int viewportX;
-    int viewportY;
-    int viewportW;
-    int viewportH;
 
     double realWidth;
     double realHeight;
@@ -89,7 +84,7 @@ namespace fgfx {
     std::shared_ptr<SpriteFont> getSpriteFont(std::string spriteFontName);
     std::shared_ptr<MSDFFont> getMSDFFont(std::string msdfFontName);
     std::shared_ptr<Texture> getTexture(std::string texture);
-    std::shared_ptr<Texture> createEmptyTexture(int width, int height, GLint internalFormat, GLenum format, GLenum type);
+    std::shared_ptr<Texture> createEmptyTexture(int width, int height, PixelFormat format = PixelFormat::RGBA8Unorm);
 
 #ifdef EMSCRIPTEN
     int getSpritesToLoadCount();
@@ -113,8 +108,6 @@ namespace fgfx {
     void setSceneRenderFunction(std::function<void(FrameBuilder&, double, float)> fn);
     void render(double time, float delta, int widthp, int heightp);
     void uploadTextures();
-    void seedDrawTarget(int widthp, int heightp);
-    void bindDrawTarget(GLint fbo, int x, int y, int w, int h);
 
     void upload(std::function<void()> uploadFunction);
 

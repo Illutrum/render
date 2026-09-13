@@ -4,166 +4,56 @@
 
 #include "Texture.hpp"
 #include <fastgfx.hpp>
+#include "backend/RenderBackend.hpp"
 
 namespace fgfx {
 
   Texture::Texture(std::string namep) : name(namep) {
     texture = -1;
-    framebuffer = -1;
     unloaded = false;
     initialized = false;
     loadPromise = nullptr;
-#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
-    GLuint tex;
-    glGenTextures(1, &tex);
-    unsigned char zeros[4] = {0, 0, 0, 0};
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, zeros);
-    texture = tex;
-    initialized = true;
-#endif
-  };
-  Texture::Texture(std::string namep, GLuint tex) : name(namep) {
-    texture = -1;
-    framebuffer = -1;
+  }
+
+  Texture::Texture(std::string namep, TextureHandle tex) : name(namep) {
+    texture = static_cast<int>(tex);
     unloaded = false;
-    initialized = true;
-    texture = tex;
+    initialized = tex != kNullTexture;
     loadPromise = nullptr;
-  };
+  }
 
   Texture::Texture() {
     texture = -1;
-    framebuffer = -1;
     unloaded = false;
     initialized = false;
     loadPromise = nullptr;
-#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
-    GLuint tex;
-    glGenTextures(1, &tex);
-    texture = tex;
-    initialized = true;
-#endif
-  };
+  }
 
-  Texture::Texture(bool initialize) {
-    texture = -1;
-    framebuffer = -1;
-    unloaded = false;
-    initialized = false;
-    loadPromise = nullptr;
-#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
-    if(initialize) {
-      GLuint tex;
-      glGenTextures(1, &tex);
-      texture = tex;
-      initialized = true;
+  void Texture::recreate(int widthp, int heightp, PixelFormat formatp) {
+    if (!engine || !engine->getBackend()) {
+      return;
     }
-#else
-    (void)initialize;
-#endif
-  };
-
-  Texture::Texture(int widthp, int heightp, GLint internalFormatp, GLenum formatp, GLenum typep, GLuint tex) {
+    if (texture >= 0) {
+      engine->getBackend()->destroyTexture(handle());
+      texture = -1;
+    }
+    TextureDesc desc;
+    desc.width = widthp;
+    desc.height = heightp;
+    desc.format = formatp;
+    desc.generateMipmaps = false;
+    texture = static_cast<int>(engine->getBackend()->createTexture(desc));
     width = widthp;
     height = heightp;
-    unloaded = false;
-    framebuffer = -1;
-    internalFormat = internalFormatp;
     format = formatp;
-    type = typep;
-    texture = tex;
-    initialized = true;
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    loadPromise = nullptr;
-  }
-  Texture::Texture(int widthp, int heightp, GLint internalFormatp, GLenum formatp, GLenum typep) {
-    width = widthp;
-    height = heightp;
-    unloaded = false;
-    framebuffer = -1;
-    internalFormat = internalFormatp;
-    format = formatp;
-    type = typep;
-    GLuint tex;
-    glGenTextures(1, &tex);
-    texture = tex;
-    initialized = true;
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    loadPromise = nullptr;
-
-    fgfx::checkGLError();
-  }
-
-  void Texture::upload(int widthp, int heightp, GLint internalFormatp, GLenum formatp, GLenum typep, void* buffer) {
-    width = widthp;
-    height = heightp;
-    internalFormat = internalFormatp;
-    format = formatp;
-    type = typep;
-    unloaded = false;
-    if(!initialized) {
-      GLuint tex;
-      glGenTextures(1, &tex);
-      texture = tex;
-    }
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, buffer);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  }
-
-  void Texture::resize(int widthp, int heightp) {
-    if(width != widthp || height != heightp) {
-      width = widthp;
-      height = heightp;
-      glBindTexture(GL_TEXTURE_2D, texture);
-      glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, 0);
-    }
-  }
-  void Texture::beginRender() {
-    old_fbo = engine->boundFramebuffer;
-    old_viewport[0] = engine->viewportX;
-    old_viewport[1] = engine->viewportY;
-    old_viewport[2] = engine->viewportW;
-    old_viewport[3] = engine->viewportH;
-    if(framebuffer == -1) {
-      GLuint fbo;
-      glGenFramebuffers(1, &fbo);
-      framebuffer = fbo;
-    }
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    engine->bindDrawTarget(framebuffer, 0, 0, width, height);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-  }
-  void Texture::endRender(bool clean) {
-    engine->bindDrawTarget(old_fbo, old_viewport[0], old_viewport[1], old_viewport[2], old_viewport[3]);
-    if(clean) {
-      GLuint fbo = framebuffer;
-      glDeleteFramebuffers(1, &fbo);
-      framebuffer = -1;
-    }
+    initialized = texture > 0;
   }
 
   Texture::~Texture() {
-#if !(defined(FGFX_BACKEND_WEBGPU) && defined(EMSCRIPTEN))
-    if (texture >= 0) {
-      GLuint tex = texture;
-      glDeleteTextures(1, &tex);
+    if (texture >= 0 && engine && engine->getBackend()) {
+      engine->getBackend()->destroyTexture(handle());
+      texture = -1;
     }
-#endif
   }
 
 }

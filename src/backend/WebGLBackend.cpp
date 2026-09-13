@@ -47,6 +47,14 @@ WebGLBackend::~WebGLBackend() {
     if (info.program) glDeleteProgram(info.program);
   }
   pipelines_.clear();
+  for (auto& [_, fbo] : fboCache_) {
+    if (fbo) glDeleteFramebuffers(1, &fbo);
+  }
+  fboCache_.clear();
+  if (stencilRbo_) {
+    glDeleteRenderbuffers(1, &stencilRbo_);
+    stencilRbo_ = 0;
+  }
   if (scratchUbo_) {
     glDeleteBuffers(1, &scratchUbo_);
     scratchUbo_ = 0;
@@ -140,6 +148,8 @@ TextureHandle WebGLBackend::createTexture(const TextureDesc& desc) {
                   desc.generateMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, desc.width, desc.height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, nullptr);
   glBindTexture(GL_TEXTURE_2D, 0);
   return static_cast<TextureHandle>(tex);
 }
@@ -155,7 +165,53 @@ void WebGLBackend::updateTexture(TextureHandle texture, int width, int height,
 
 void WebGLBackend::destroyTexture(TextureHandle texture) {
   GLuint tex = static_cast<GLuint>(texture);
+  auto it = fboCache_.find(tex);
+  if (it != fboCache_.end()) {
+    glDeleteFramebuffers(1, &it->second);
+    fboCache_.erase(it);
+  }
   glDeleteTextures(1, &tex);
+}
+
+GLuint WebGLBackend::ensureFramebuffer(TextureHandle texture) {
+  GLuint tex = static_cast<GLuint>(texture);
+  auto it = fboCache_.find(tex);
+  if (it != fboCache_.end()) {
+    return it->second;
+  }
+  GLuint fbo = 0;
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+  fboCache_[tex] = fbo;
+  return fbo;
+}
+
+void WebGLBackend::bindColorTarget(TextureHandle texture, int viewportW, int viewportH) {
+  if (texture == kNullTexture) {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  } else {
+    glBindFramebuffer(GL_FRAMEBUFFER, ensureFramebuffer(texture));
+  }
+  glViewport(0, 0, viewportW, viewportH);
+}
+
+void WebGLBackend::attachDepthStencil(int width, int height) {
+  if (stencilRbo_ == 0) {
+    glGenRenderbuffers(1, &stencilRbo_);
+  }
+  if (stencilW_ != width || stencilH_ != height) {
+    glBindRenderbuffer(GL_RENDERBUFFER, stencilRbo_);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+    stencilW_ = width;
+    stencilH_ = height;
+  }
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                            GL_RENDERBUFFER, stencilRbo_);
+}
+
+void WebGLBackend::unbindColorTarget() {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void WebGLBackend::beginFrame() {
@@ -165,10 +221,7 @@ void WebGLBackend::beginFrame() {
 void WebGLBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                                     const ClearValue& clear, int viewportW,
                                     int viewportH) {
-  if (colorTarget == kNullTexture) {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  }
-  glViewport(0, 0, viewportW, viewportH);
+  bindColorTarget(colorTarget, viewportW, viewportH);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   if (loadOp == LoadOp::Clear) {

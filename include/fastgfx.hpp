@@ -32,9 +32,6 @@ namespace fgfx {
 
 #ifdef __USE_GLFW
   extern GLFWwindow* glfwWindow;
-#ifdef FGFX_BACKEND_WEBGPU
-  extern GLFWwindow* glContextWindow;  // hidden window for GL texture loading
-#endif
 #endif
 }
 

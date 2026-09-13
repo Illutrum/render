@@ -5,9 +5,8 @@
 #ifndef FGFX_TEXTURE_H
 #define FGFX_TEXTURE_H
 
-
 #include <string>
-#include "config.hpp"
+#include "backend/BackendTypes.hpp"
 #include <serialization/promise.hpp>
 
 namespace fgfx {
@@ -15,36 +14,27 @@ namespace fgfx {
   class Texture : public std::enable_shared_from_this<Texture> {
   public:
     std::string name;
-    int texture;
-    bool initialized;
-    bool unloaded;
-    int width;
-    int height;
-    GLint internalFormat;
-    GLenum format;
-    GLenum type;
-
-    int framebuffer;
-    GLint old_fbo;
-    GLint old_viewport[4];
+    int texture = -1;
+    bool initialized = false;
+    bool unloaded = false;
+    int width = 0;
+    int height = 0;
+    PixelFormat format = PixelFormat::RGBA8Unorm;
 
     Texture();
-    Texture(bool initialize);
     Texture(std::string namep);
-    Texture(std::string namep, GLuint tex);
-    Texture(int widthp, int heightp, GLint internalFormatp, GLenum formatp, GLenum typep);
-    Texture(int widthp, int heightp, GLint internalFormatp, GLenum formatp, GLenum typep, GLuint tex);
+    Texture(std::string namep, TextureHandle tex);
     ~Texture();
-    void upload(int widthp, int heightp, GLint internalFormatp, GLenum formatp, GLenum typep, void* buffer);
 
-    void resize(int widthp, int heightp);
-    void beginRender();
-    void endRender(bool clean = false);
+    TextureHandle handle() const {
+      return texture >= 0 ? static_cast<TextureHandle>(texture) : kNullTexture;
+    }
+
+    void recreate(int widthp, int heightp, PixelFormat formatp);
 
     std::shared_ptr<serialization::promise<std::shared_ptr<Texture>>> loadPromise;
   };
 
 }
-
 
 #endif //FGFX_TEXTURE_H

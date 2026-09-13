@@ -35,6 +35,11 @@ class WebGLBackend : public RenderBackend {
                      const void* data) override;
   void destroyTexture(TextureHandle texture) override;
 
+  GLuint ensureFramebuffer(TextureHandle texture);
+  void bindColorTarget(TextureHandle texture, int viewportW, int viewportH);
+  void attachDepthStencil(int width, int height);
+  void unbindColorTarget();
+
   void beginFrame() override;
   void beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                        const ClearValue& clear, int viewportW,
@@ -64,6 +69,10 @@ class WebGLBackend : public RenderBackend {
   std::unordered_map<GLuint, PipelineInfo> pipelines_;
   // Track the GL target for each buffer so updateBuffer binds correctly.
   std::unordered_map<GLuint, GLenum> bufferTargets_;
+  std::unordered_map<GLuint, GLuint> fboCache_;
+  GLuint stencilRbo_ = 0;
+  int stencilW_ = 0;
+  int stencilH_ = 0;
   GLuint currentProgram_ = 0;
   GLuint scratchUbo_ = 0;
 };

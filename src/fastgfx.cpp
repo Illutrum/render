@@ -40,9 +40,6 @@ namespace fgfx {
 
 #ifdef __USE_GLFW
   GLFWwindow* glfwWindow;
-#ifdef FGFX_BACKEND_WEBGPU
-  GLFWwindow* glContextWindow;  // hidden window for GL texture loading
-#endif
 #endif
 
   namespace {
@@ -107,29 +104,16 @@ namespace fgfx {
       throw InitializationFailed();
     }
 
-#ifdef FGFX_BACKEND_WEBGPU
-    // Create a hidden GL window for texture loading (glGenTextures etc.).
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-    glfwWindowHint(GLFW_ALPHA_BITS, 8);
-    glfwWindowHint(GLFW_SAMPLES, 16);
-    glContextWindow = glfwCreateWindow(1, 1, "FGFX-GL-Context", NULL, NULL);
-    if (!glContextWindow) {
-      fgfx_log("could not create GL context window")
-      throw InitializationFailed();
-    }
-    glfwMakeContextCurrent(glContextWindow);
-    glEnable(GL_MULTISAMPLE);
-#else
+#ifndef FGFX_BACKEND_WEBGPU
     glfwMakeContextCurrent(glfwWindow);
     glEnable(GL_MULTISAMPLE);
-#endif
 #ifdef __linux__
     GLenum err = glewInit();
     if (err != GLEW_OK) {
       fgfx_log("could not init glew %d : %s", err, glewGetErrorString(err));
       throw InitializationFailed();
     }
+#endif
 #endif
 
     fgfx::engine = std::make_shared<fgfx::Engine>();

@@ -11,6 +11,7 @@
 
 #include <glm/glm.hpp>
 #include <array>
+#include <functional>
 #include <vector>
 #include <string>
 
@@ -45,6 +46,8 @@ struct DrawCall {
   int vertexCount = 0;
 };
 
+enum class PassKind { Render, External };
+
 struct RenderPass {
   std::string name;
   TextureHandle colorTarget = kNullTexture;  // 0 = surface
@@ -53,6 +56,8 @@ struct RenderPass {
   int viewportW = 0;
   int viewportH = 0;
   std::vector<DrawCall> drawCalls;
+  PassKind kind = PassKind::Render;
+  std::function<void(RenderBackend&)> externalCallback;
 };
 
 // Context handed to batches during recording.
@@ -69,6 +74,12 @@ class FrameGraph {
   void execute(RenderBackend& backend) {
     backend.beginFrame();
     for (auto& pass : passes_) {
+      if (pass.kind == PassKind::External) {
+        if (pass.externalCallback) {
+          pass.externalCallback(backend);
+        }
+        continue;
+      }
       backend.beginRenderPass(pass.colorTarget, pass.loadOp, pass.clear,
                                pass.viewportW, pass.viewportH);
       for (auto& dc : pass.drawCalls) {

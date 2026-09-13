@@ -121,8 +121,6 @@ namespace fgfx {
 
   void SpritesTexture::upload() { // in renderer thread
     fgfx_log("SPRITES TEXTURE UPLOAD")
-#ifdef FGFX_BACKEND_WEBGPU
-    // WebGPU path: create/upload texture through the backend.
     if (!textureCreated) {
       fgfx::TextureDesc desc;
       desc.width = image->width;
@@ -136,21 +134,6 @@ namespace fgfx {
     fgfx::engine->getBackend()->updateTexture(
         static_cast<fgfx::TextureHandle>(texture),
         image->width, image->height, image->data);
-#else
-    if(!textureCreated) {
-      glGenTextures(1, &texture);
-      glBindTexture(GL_TEXTURE_2D, texture);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      textureCreated = true;
-    }
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->width, image->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-#endif
 
     for(SpriteInfo& info : packedSprites) {
       info.sprite->setTextureFragment(texture, info.xmin, info.ymin, info.xmax, info.ymax,
