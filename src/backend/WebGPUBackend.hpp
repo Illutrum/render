@@ -85,7 +85,9 @@ class WebGPUBackend : public RenderBackend {
   void beginFrame() override;
   void beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                        const ClearValue& clear, int viewportW,
-                       int viewportH) override;
+                       int viewportH,
+                       TextureHandle depthTarget = kNullTexture) override;
+  void clearSurface(const ClearValue& clear) override;
   void bindPipeline(PipelineHandle pipeline) override;
   uint32_t uniformRingCapacity() const override;
   uint32_t uniformRingAlignment() const override;
@@ -131,7 +133,8 @@ class WebGPUBackend : public RenderBackend {
   int surfaceHeight_ = 0;
   bool surfaceConfigured_ = false;
 
-  // Resource tables (indexed by handle).
+  // Resource tables (indexed by handle). Handles are indices into these
+  // vectors; destroy* nulls the slot via RAII but indices are never recycled.
   std::vector<PipelineInfo> pipelines_;
   std::vector<BufferInfo> buffers_;
   std::vector<TextureInfo> textures_;

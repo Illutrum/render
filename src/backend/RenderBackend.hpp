@@ -55,7 +55,9 @@ class RenderBackend {
   virtual void beginFrame() = 0;
   virtual void beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                                const ClearValue& clear, int viewportW,
-                               int viewportH) = 0;
+                               int viewportH,
+                               TextureHandle depthTarget = kNullTexture) = 0;
+  virtual void clearSurface(const ClearValue& clear) = 0;
   virtual void bindPipeline(PipelineHandle pipeline) = 0;
   virtual void bindUniformData(int binding, uint32_t offset, int size) = 0;
   virtual void bindTexture(int binding, TextureHandle texture) = 0;

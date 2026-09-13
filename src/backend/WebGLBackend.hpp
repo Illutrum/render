@@ -52,7 +52,9 @@ class WebGLBackend : public RenderBackend {
   void beginFrame() override;
   void beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                        const ClearValue& clear, int viewportW,
-                       int viewportH) override;
+                       int viewportH,
+                       TextureHandle depthTarget = kNullTexture) override;
+  void clearSurface(const ClearValue& clear) override;
   void bindPipeline(PipelineHandle pipeline) override;
   uint32_t uniformRingCapacity() const override;
   uint32_t uniformRingAlignment() const override;

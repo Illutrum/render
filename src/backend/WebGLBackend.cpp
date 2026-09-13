@@ -224,7 +224,8 @@ void WebGLBackend::beginFrame() {
 
 void WebGLBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                                     const ClearValue& clear, int viewportW,
-                                    int viewportH) {
+                                    int viewportH, TextureHandle depthTarget) {
+  (void)depthTarget;
   bindColorTarget(colorTarget, viewportW, viewportH);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -234,6 +235,12 @@ void WebGLBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
   }
   currentProgram_ = 0;
   lastTexture_.fill(~TextureHandle{0});
+}
+
+void WebGLBackend::clearSurface(const ClearValue& clear) {
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClearColor(clear.r, clear.g, clear.b, clear.a);
+  glClear(GL_COLOR_BUFFER_BIT);
 }
 
 void WebGLBackend::bindPipeline(PipelineHandle pipeline) {

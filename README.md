@@ -1,15 +1,17 @@
 # FastGFX
 
-Graphics rendering library optimized for speed. Primary target is **WebGL via Emscripten**; **native desktop (GLFW + GLEW)** is supported for development and testing.
+Graphics rendering library. **WebGL2** (native OpenGL 3.3 / wasm) and **WebGPU** (Dawn Vulkan native / wasm) share one `RenderBackend` and frame graph.
 
-Includes async file I/O (`fgfx::io`), sprite/MSDF layers, texture management, and a JavaScript runtime for web asset loading.
+Includes async file I/O (`fgfx::io`), sprite/MSDF batches, texture management, and a JavaScript runtime for web asset loading.
 
 ## Platforms
 
 | Target | Status |
 |--------|--------|
-| Web (Emscripten + WebGL) | Primary |
-| Native Linux desktop (GLFW + GLEW + libpng) | Dev / testing |
+| Web (Emscripten + WebGL2) | Supported |
+| Web (Emscripten + WebGPU) | Supported |
+| Native Linux desktop (GLFW + GLEW / OpenGL) | Supported |
+| Native Linux desktop (GLFW + Dawn / Vulkan) | Supported |
 | Android / iOS / SDL | Not active (legacy code may remain) |
 
 ## Quick start
@@ -21,11 +23,18 @@ cmake --build cmake-build-debug --target logo
 ./cmake-build-debug/examples/logo
 ```
 
-Web example (requires JS bundle — see [docs/building.md](docs/building.md)):
+WebGPU native:
+
+```bash
+cmake --build cmake-build-webgpu --target example_visualization
+./cmake-build-webgpu/examples/example_visualization
+```
+
+Web example:
 
 ```bash
 cmake --build cmake-build-emscripten --target msdf_example
-cd cmake-build-emscripten/game-dev/fgfx/examples/msdf_example
+cd cmake-build-emscripten/examples/msdf_example
 python -m http.server 8080
 ```
 
@@ -37,8 +46,8 @@ python -m http.server 8080
 | `logo_blur` | Sprite + bitmap font (`cat`) |
 | `lines` | Animated line layer |
 | `msdf_example` | MSDF text rendering (`ui` font) |
-
-Each web example has a matching `.html` in `examples/`.
+| `example_visualization` | ThorVG + sprites + MSDF debug text (GL and WebGPU) |
+| `example_game` | Reference game + loading UI |
 
 ## File I/O
 
@@ -51,14 +60,13 @@ auto data = fgfx::io::loadFile("assets/logo.png");
 data->on_resolved([](std::string& bytes) { /* ... */ });
 ```
 
-On native builds, `fgfx::init()` starts the I/O thread pool; `fgfx::destroy()` shuts it down. See [docs/web-runtime.md](docs/web-runtime.md) for the web bridge.
+On native builds, `fgfx::init()` starts the I/O thread pool; `fgfx::destroy()` shuts it down.
 
 ## Documentation
 
-- [Building](docs/building.md) — native / wasm, JS bundle, dependencies
-- [Fonts](docs/fonts.md) — MSDF and bitmap font generation
-- [Web runtime](docs/web-runtime.md) — `fgfxLoader`, Emscripten glue
-- [Architecture](docs/architecture.md) — layers, C++ vs JS split
+- [Architecture](docs/architecture.md) — backends, frame graph, uniforms, features
+- [WebGPU TODO](../web-gpu-todo.md) — phase checklist (as-built vs deferred)
+- [game-dev overview](../README.md) — build presets (GL / WebGPU / wasm)
 
 ## Tests (doctest)
 

@@ -55,22 +55,6 @@ fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
   return input.vColor * texColor;
 }
 )WGSL";
-
-void clearBackbuffer(wgpu::CommandEncoder encoder, WGPUTextureView view,
-                     const ClearValue& clear) {
-  WGPURenderPassColorAttachment colorAttachment =
-      WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
-  colorAttachment.view = view;
-  colorAttachment.loadOp = WGPULoadOp_Clear;
-  colorAttachment.storeOp = WGPUStoreOp_Store;
-  colorAttachment.clearValue = {clear.r, clear.g, clear.b, clear.a};
-
-  WGPURenderPassDescriptor rpDesc = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
-  rpDesc.colorAttachmentCount = 1;
-  rpDesc.colorAttachments = &colorAttachment;
-  wgpu::RenderPassEncoder pass = encoder.beginRenderPass(rpDesc);
-  pass.end();
-}
 }  // namespace
 
 WGPUVertexFormat WebGPUBackend::vertexFormatOf(PixelFormat f) {
@@ -135,12 +119,25 @@ void WebGPUBackend::initWithDevice(wgpu::Instance instance,
   surfaceWidth_ = width;
   surfaceHeight_ = height;
 
+  // Prefer 8-bit UNORM (not *Srgb) so shader/clear 0–1 values match GL's
+  // GL_RGBA8 path. Dawn lists BGRA8UnormSrgb first; writing linear clears
+  // into sRGB lightens the whole frame vs OpenGL.
+  auto isLinearUnorm8 = [](WGPUTextureFormat f) {
+    return f == WGPUTextureFormat_BGRA8Unorm ||
+           f == WGPUTextureFormat_RGBA8Unorm;
+  };
   surfaceFormat_ = WGPUTextureFormat_BGRA8Unorm;
   wgpu::SurfaceCapabilities caps = wgpu::Default;
   if (adapter_ &&
       surface_->getCapabilities(adapter_, &caps) == wgpu::Status::Success &&
       caps.formatCount > 0) {
     surfaceFormat_ = caps.formats[0];
+    for (size_t i = 0; i < caps.formatCount; ++i) {
+      if (isLinearUnorm8(caps.formats[i])) {
+        surfaceFormat_ = caps.formats[i];
+        break;
+      }
+    }
     fgfx_log("WebGPU: surface format=%d (%zu formats)\n",
              static_cast<int>(surfaceFormat_),
              static_cast<size_t>(caps.formatCount));
@@ -297,7 +294,9 @@ PipelineHandle WebGPUBackend::createPipeline(const PipelineDesc& desc) {
 
   // Zero-init leaves writeMask=None, so the shader never writes color.
   WGPUColorTargetState colorTarget = WGPU_COLOR_TARGET_STATE_INIT;
-  colorTarget.format = surfaceFormat_;
+  colorTarget.format = (desc.targetFormat == PixelFormat::BGRA8Unorm)
+      ? surfaceFormat_
+      : textureFormatOf(desc.targetFormat);
   colorTarget.blend = &blendState;
 
   WGPUFragmentState fragmentState = WGPU_FRAGMENT_STATE_INIT;
@@ -434,18 +433,23 @@ void WebGPUBackend::destroyTexture(TextureHandle texture) {
   auto idx = static_cast<size_t>(texture);
   if (idx >= textures_.size()) return;
   textures_[idx] = {};
+  for (auto it = bindGroupCache_.begin(); it != bindGroupCache_.end();) {
+    if (it->first.texture == texture) {
+      it = bindGroupCache_.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 void WebGPUBackend::beginFrame() {
   bindGroupCache_.clear();
   resetUniformRing();
   currentPipeline_ = nullptr;
-#ifdef EMSCRIPTEN
   if (engine && engine->width > 0 && engine->height > 0 &&
       (engine->width != surfaceWidth_ || engine->height != surfaceHeight_)) {
     reconfigureSurface(engine->width, engine->height);
   }
-#endif
   if (!surface_ || !device_) return;
   currentBackbufferView_ = {};
   currentBackbufferTexture_ = {};
@@ -473,18 +477,30 @@ void WebGPUBackend::beginFrame() {
   currentBackbufferTexture_ = wgpu::Texture(surfaceTexture.texture);
   currentBackbufferView_ = currentBackbufferTexture_->createView();
   commandEncoder_ = device_.createCommandEncoder();
+}
 
-  // Always clear the swapchain. An empty FrameGraph still presents, and
-  // Dawn swapchain images are uninitialized until written.
-  ClearValue clear{0.31f, 0.52f, 0.16f, 1.0f};
-  clearBackbuffer(*commandEncoder_, *currentBackbufferView_, clear);
+void WebGPUBackend::clearSurface(const ClearValue& clear) {
+  if (!commandEncoder_ || !currentBackbufferView_) {
+    return;
+  }
+  WGPURenderPassColorAttachment colorAttachment =
+      WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
+  colorAttachment.view = *currentBackbufferView_;
+  colorAttachment.loadOp = WGPULoadOp_Clear;
+  colorAttachment.storeOp = WGPUStoreOp_Store;
+  colorAttachment.clearValue = {clear.r, clear.g, clear.b, clear.a};
+
+  WGPURenderPassDescriptor rpDesc = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
+  rpDesc.colorAttachmentCount = 1;
+  rpDesc.colorAttachments = &colorAttachment;
+  wgpu::RenderPassEncoder pass = commandEncoder_->beginRenderPass(rpDesc);
+  pass.end();
 }
 
 void WebGPUBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                                       const ClearValue& clear, int viewportW,
-                                      int viewportH) {
-  // Zero-init sets depthSlice=0, which Dawn rejects for 2D views and
-  // invalidates the whole command encoder (clear never lands).
+                                      int viewportH,
+                                      TextureHandle depthTarget) {
   WGPURenderPassColorAttachment colorAttachment =
       WGPU_RENDER_PASS_COLOR_ATTACHMENT_INIT;
   colorAttachment.view = (colorTarget == kNullTexture)
@@ -500,9 +516,30 @@ void WebGPUBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
   colorAttachment.storeOp = WGPUStoreOp_Store;
   colorAttachment.clearValue = {clear.r, clear.g, clear.b, clear.a};
 
+  WGPURenderPassDepthStencilAttachment depthAttachment =
+      WGPU_RENDER_PASS_DEPTH_STENCIL_ATTACHMENT_INIT;
+  bool hasDepth = false;
+  if (depthTarget != kNullTexture) {
+    auto didx = static_cast<size_t>(depthTarget);
+    if (didx < textures_.size() && *textures_[didx].view) {
+      depthAttachment.view = *textures_[didx].view;
+      depthAttachment.depthLoadOp = WGPULoadOp_Clear;
+      depthAttachment.depthStoreOp = WGPUStoreOp_Store;
+      depthAttachment.depthClearValue = 1.0f;
+      depthAttachment.depthReadOnly = false;
+      depthAttachment.stencilLoadOp = WGPULoadOp_Undefined;
+      depthAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
+      depthAttachment.stencilReadOnly = true;
+      hasDepth = true;
+    }
+  }
+
   WGPURenderPassDescriptor rpDesc = WGPU_RENDER_PASS_DESCRIPTOR_INIT;
   rpDesc.colorAttachmentCount = 1;
   rpDesc.colorAttachments = &colorAttachment;
+  if (hasDepth) {
+    rpDesc.depthStencilAttachment = &depthAttachment;
+  }
 
   passEncoder_ = commandEncoder_->beginRenderPass(rpDesc);
   passEncoder_->setViewport(0, 0, static_cast<float>(viewportW),
@@ -554,6 +591,8 @@ void WebGPUBackend::bindVertexBuffer(int binding, BufferHandle buffer) {
   if (!passEncoder_) return;
   auto idx = static_cast<size_t>(buffer);
   WGPUBuffer b = *buffers_[idx].buffer;
+  // Whole-buffer bind: batches currently issue one draw per buffer. If a
+  // buffer is ever sliced across draw calls, pass explicit offset+size.
   passEncoder_->setVertexBuffer(static_cast<uint32_t>(binding), b, 0,
                                 WGPU_WHOLE_SIZE);
 }

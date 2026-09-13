@@ -109,6 +109,10 @@ struct PipelineDesc {
   // When false, bind group is uniform-only (no sampled texture).
   bool hasTexture = true;
   FeatureSet requiredFeatures = 0;
+  // Color-attachment format. Default BGRA8Unorm means "use the swapchain
+  // format" on WebGPU (Dawn is BGRA, wasm canvas is often RGBA). Set to
+  // RGBA8Unorm (or another explicit format) for offscreen targets.
+  PixelFormat targetFormat = PixelFormat::BGRA8Unorm;
 };
 
 struct TextureDesc {

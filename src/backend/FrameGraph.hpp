@@ -50,6 +50,7 @@ enum class PassKind { Render, External };
 struct RenderPass {
   std::string name;
   TextureHandle colorTarget = kNullTexture;  // 0 = surface
+  TextureHandle depthTarget = kNullTexture;
   LoadOp loadOp = LoadOp::Clear;
   ClearValue clear;
   int viewportW = 0;
@@ -107,6 +108,7 @@ class FrameGraph {
  public:
   void execute(RenderBackend& backend) {
     backend.beginFrame();
+    bool wroteSurface = false;
     for (auto& pass : passes_) {
       if (!backend.supportsAll(pass.requiredFeatures)) {
         logUnsupportedPass(pass.name, pass.requiredFeatures, backend);
@@ -118,8 +120,12 @@ class FrameGraph {
         }
         continue;
       }
+      if (pass.colorTarget == kNullTexture) {
+        wroteSurface = true;
+      }
       backend.beginRenderPass(pass.colorTarget, pass.loadOp, pass.clear,
-                               pass.viewportW, pass.viewportH);
+                               pass.viewportW, pass.viewportH,
+                               pass.depthTarget);
       if (pass.opaque) {
         std::stable_sort(
             pass.drawCalls.begin(), pass.drawCalls.end(),
@@ -147,12 +153,16 @@ class FrameGraph {
       }
       backend.endRenderPass();
     }
+    if (!wroteSurface) {
+      backend.clearSurface(surfaceClear_);
+    }
     backend.endFrame();
   }
 
  private:
   friend class FrameBuilder;
   std::vector<RenderPass> passes_;
+  ClearValue surfaceClear_{0.31f, 0.52f, 0.16f, 1.0f};
 };
 
 // FrameBuilder: fluent API used by the scene render function to record passes.
@@ -170,6 +180,12 @@ class FrameBuilder {
 
   TextureHandle surfaceColor() const { return surfaceColor_; }
   RenderBackend& backend() { return *backend_; }
+
+  FrameBuilder& setSurfaceClear(const ClearValue& clear) {
+    surfaceClear_ = clear;
+    return *this;
+  }
+  const ClearValue& surfaceClear() const { return surfaceClear_; }
 
   RenderPass& beginPass(const std::string& name, TextureHandle colorTarget,
                         LoadOp loadOp, const ClearValue& clear) {
@@ -193,6 +209,7 @@ class FrameBuilder {
   FrameGraph build() {
     FrameGraph graph;
     graph.passes_ = std::move(passes_);
+    graph.surfaceClear_ = surfaceClear_;
     return graph;
   }
 
@@ -203,6 +220,7 @@ class FrameBuilder {
   int viewportH_;
   FrameContext context_;
   std::vector<RenderPass> passes_;
+  ClearValue surfaceClear_{0.31f, 0.52f, 0.16f, 1.0f};
 };
 
 }  // namespace fgfx
