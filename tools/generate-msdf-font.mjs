@@ -16,7 +16,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const ttfPath = process.argv[2] ?? '/usr/share/fonts/TTF/DejaVuSans.ttf'
 const outputBase = resolve(__dirname, process.argv[3] ?? '../examples/assets/ui')
-const charset = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+const charset = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~' +
+  'ĄĆĘŁŃÓŚŹŻąćęłńóśźż°' +
+  '☉☽☿♀♂♃♄♅♆♇☊♈♉♊♋♌♍♎♏♐♑♒♓⚳⚴⚵⚶⚷⚸⊕'
 
 const { textures, font } = await new Promise((resolvePromise, reject) => {
   generateBMFont(ttfPath, {
@@ -24,7 +26,7 @@ const { textures, font } = await new Promise((resolvePromise, reject) => {
     filename: outputBase,
     charset,
     fontSize: 42,
-    textureSize: [512, 512],
+    textureSize: [1024, 1024],
     distanceRange: 4,
     fieldType: 'msdf'
   }, (error, textures, font) => {

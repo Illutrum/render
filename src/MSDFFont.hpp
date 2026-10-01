@@ -2,6 +2,7 @@
 #define FGFX_MSDFFONT_H
 
 #include "SpriteFont.hpp"
+#include "TextInk.hpp"
 #include <glm/glm.hpp>
 #include <map>
 #include <string>
@@ -40,6 +41,7 @@ namespace fgfx {
 
     glm::vec2 measureString(const std::string& text);
     glm::vec2 measureCharacter(char c);
+    TextInk measureInk(const std::string& text) const;
 
     std::shared_ptr<serialization::promise<std::shared_ptr<MSDFFont>>> loadPromise;
   };

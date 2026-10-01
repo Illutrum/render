@@ -65,6 +65,7 @@ On native builds, `fgfx::init()` starts the I/O thread pool; `fgfx::destroy()` s
 ## Documentation
 
 - [Architecture](docs/architecture.md) — backends, frame graph, uniforms, features
+- [Text layout](docs/text.md) — `measureInk` vs `measureString`; center glyphs by ink, not baseline
 - [WebGPU TODO](../web-gpu-todo.md) — phase checklist (as-built vs deferred)
 - [game-dev overview](../README.md) — build presets (GL / WebGPU / wasm)
 

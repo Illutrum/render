@@ -24,6 +24,36 @@ namespace fgfx {
     float advance;
   };
 
+  // Visual ink AABB in the same font space as renderString (origin = pen,
+  // +X right, +Y up). Empty when the string has no drawable glyphs.
+  struct TextInk {
+    float minX = 0.0f;
+    float minY = 0.0f;
+    float maxX = 0.0f;
+    float maxY = 0.0f;
+    float advance = 0.0f;
+    bool empty = true;
+
+    float cx() const {
+      return (minX + maxX) * 0.5f;
+    }
+    float cy() const {
+      return (minY + maxY) * 0.5f;
+    }
+    float width() const {
+      return maxX - minX;
+    }
+    float height() const {
+      return maxY - minY;
+    }
+  };
+
+  enum class TextAlignH {
+    Left,
+    Center,
+    Right
+  };
+
   class SpriteFont : public std::enable_shared_from_this<SpriteFont> {
   public:
     std::string name;
@@ -52,6 +82,7 @@ namespace fgfx {
 
     glm::vec2 measureString(const std::string& text);
     glm::vec2 measureCharacter(char c);
+    TextInk measureInk(const std::string& text) const;
 
     std::shared_ptr<serialization::promise<std::shared_ptr<SpriteFont>>> loadPromise;
   };

@@ -1,5 +1,6 @@
 #include "MSDFFont.hpp"
 #include "GlyphBatch.hpp"
+#include "Utf8.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 #include "config.hpp"
 
@@ -13,19 +14,28 @@ namespace fgfx {
       layer->setPxRange(font.pxRange);
       layer->setAtlasSize(font.scale);
       float x = 0;
+      int i = from;
       int to = from + count;
-      for (int i = from; i < to; i++) {
-        char c = text[i];
-        auto it = font.characters.find(c);
+      if (to > static_cast<int>(text.size())) {
+        to = static_cast<int>(text.size());
+      }
+      while (i < to) {
+        unsigned cp = nextUtf8(text, i);
+        if (cp > 0xFFFFu) {
+          continue;
+        }
+        auto it = font.characters.find(static_cast<unsigned short>(cp));
         if (it != font.characters.end()) {
           SpriteCharacter charStruct = it->second;
-          glm::vec2 pos(x + charStruct.size.x * 0.5f + charStruct.offset.x,
-                        -charStruct.size.y * 0.5f - charStruct.offset.y);
-          auto translate = glm::translate(glm::mat4(1.0), glm::vec3(pos, 0));
-          auto scaleMat = glm::scale(glm::mat4(1.0),
-                                     glm::vec3(charStruct.size.x * 0.5f,
-                                               charStruct.size.y * 0.5f, 1));
-          layer->rawBufferSprite(charStruct.sprite, mat * translate * scaleMat, color);
+          if (charStruct.size.x > 0.0f && charStruct.size.y > 0.0f) {
+            glm::vec2 pos(x + charStruct.size.x * 0.5f + charStruct.offset.x,
+                          -charStruct.size.y * 0.5f - charStruct.offset.y);
+            auto translate = glm::translate(glm::mat4(1.0), glm::vec3(pos, 0));
+            auto scaleMat = glm::scale(glm::mat4(1.0),
+                                       glm::vec3(charStruct.size.x * 0.5f,
+                                                 charStruct.size.y * 0.5f, 1));
+            layer->rawBufferSprite(charStruct.sprite, mat * translate * scaleMat, color);
+          }
           x += charStruct.advance;
         }
       }
@@ -86,9 +96,13 @@ namespace fgfx {
 
   glm::vec2 MSDFFont::measureString(const std::string& text) {
     float width = 0;
-    for (int i = 0; i < (int)text.size(); i++) {
-      char c = text[i];
-      auto it = characters.find(c);
+    int i = 0;
+    while (i < (int)text.size()) {
+      unsigned cp = nextUtf8(text, i);
+      if (cp > 0xFFFFu) {
+        continue;
+      }
+      auto it = characters.find(static_cast<unsigned short>(cp));
       if (it != characters.end()) {
         width += it->second.advance;
       }
@@ -102,6 +116,10 @@ namespace fgfx {
       return glm::vec2(it->second.advance, lineHeight);
     }
     return glm::vec2(0, lineHeight);
+  }
+
+  TextInk MSDFFont::measureInk(const std::string& text) const {
+    return measureInkFromMap(characters, text);
   }
 
 }

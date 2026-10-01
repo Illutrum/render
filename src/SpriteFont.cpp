@@ -4,6 +4,8 @@
 
 #include "SpriteFont.hpp"
 #include "SpriteBatch.hpp"
+#include "TextInk.hpp"
+#include "Utf8.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -37,14 +39,15 @@ namespace fgfx {
                                 const std::string& text){
     //emscripten_log(EM_LOG_ERROR,"RENDER %s STRING: %s\n",name.c_str(),text.c_str());
     float x = 0;
-    for(int i = 0; i<text.size(); i++) {
-
-      char c = text[i];
-      //emscripten_log(EM_LOG_ERROR,"CHAR: %c %d\n",c,c);
-      auto it=characters.find(c);
+    int i = 0;
+    while (i < static_cast<int>(text.size())) {
+      unsigned cp = nextUtf8(text, i);
+      if (cp > 0xFFFFu) {
+        continue;
+      }
+      auto it=characters.find(static_cast<unsigned short>(cp));
       if(it!=characters.end()) {
         SpriteCharacter charStruct = it->second;
-        //emscripten_log(EM_LOG_ERROR,"RENDER CHAR: %c %d\n",c,c);
         glm::vec2 pos(x + charStruct.size.x * 0.5 + charStruct.offset.x,-charStruct.size.y*0.5-charStruct.offset.y);
         auto translate = glm::translate(glm::mat4(1.0),glm::vec3(pos,0));
         auto scale = glm::scale(glm::mat4(1.0),glm::vec3(charStruct.size.x*0.5,charStruct.size.y*0.5,1));
@@ -58,14 +61,19 @@ namespace fgfx {
                                    const std::string& text, int from, int count) {
     //emscripten_log(EM_LOG_ERROR,"RENDER %s STRING: %s\n",name.c_str(),text.c_str());
     float x = 0;
+    int i = from;
     int to = from + count;
-    for(int i = from; i < to; i++) {
-      char c = text[i];
-      //emscripten_log(EM_LOG_ERROR,"CHAR: %c %d\n",c,c);
-      auto it=characters.find(c);
+    if (to > static_cast<int>(text.size())) {
+      to = static_cast<int>(text.size());
+    }
+    while (i < to) {
+      unsigned cp = nextUtf8(text, i);
+      if (cp > 0xFFFFu) {
+        continue;
+      }
+      auto it=characters.find(static_cast<unsigned short>(cp));
       if(it!=characters.end()) {
         SpriteCharacter charStruct = it->second;
-        //emscripten_log(EM_LOG_ERROR,"RENDER CHAR: %c %d\n",c,c);
         glm::vec2 pos(x + charStruct.size.x * 0.5 + charStruct.offset.x,
                       -charStruct.size.y * 0.5 - charStruct.offset.y);
         auto translate = glm::translate(glm::mat4(1.0), glm::vec3(pos, 0));
@@ -88,9 +96,13 @@ namespace fgfx {
   glm::vec2 SpriteFont::measureString(const std::string& text) {
     float height=0;
     float width=0;
-    for(int i=0; i<text.size(); i++) {
-      char c = text[i];
-      auto it=characters.find(c);
+    int i = 0;
+    while (i < static_cast<int>(text.size())) {
+      unsigned cp = nextUtf8(text, i);
+      if (cp > 0xFFFFu) {
+        continue;
+      }
+      auto it=characters.find(static_cast<unsigned short>(cp));
       if(it!=characters.end()) {
         SpriteCharacter charStruct = it->second;
         float h = charStruct.size.y+charStruct.offset.y;
@@ -108,6 +120,10 @@ namespace fgfx {
       return glm::vec2(charStruct.advance, lineHeight);
     }
     return glm::vec2(0, lineHeight);
+  }
+
+  TextInk SpriteFont::measureInk(const std::string& text) const {
+    return measureInkFromMap(characters, text);
   }
 
 }

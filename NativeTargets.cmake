@@ -38,6 +38,7 @@ add_executable(test_fgfx
   ${FGFX_ROOT}/tests/test_file_io.cpp
   ${FGFX_ROOT}/tests/test_shaders.cpp
   ${FGFX_ROOT}/tests/test_bmfont_parse.cpp
+  ${FGFX_ROOT}/tests/test_msdf_ink.cpp
   ${FGFX_ROOT}/tests/test_png.cpp
 )
 target_include_directories(test_fgfx PRIVATE ${FGFX_INCLUDE} ${FGFX_SRC})
