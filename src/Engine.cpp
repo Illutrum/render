@@ -287,6 +287,9 @@ namespace fgfx {
 
     double lastTime = glfwGetTime() * 1000.0;
     while (!glfwWindowShouldClose(glfwWindow)) {
+      // Poll before render so keysJustPressed is visible this frame.
+      // GameHost clears edge bits after the scene has read RawInput.
+      glfwPollEvents();
       double now = glfwGetTime() * 1000.0;
       double delta = now - lastTime;
       glfwGetFramebufferSize(glfwWindow, &width, &height);
@@ -300,7 +303,6 @@ namespace fgfx {
       // GL presents via swap; WebGPU presents via surface.present() in endFrame().
       glfwSwapBuffers(glfwWindow);
 #endif
-      glfwPollEvents();
     }
   }
 #endif

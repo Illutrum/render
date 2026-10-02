@@ -2,6 +2,9 @@ import { TextureManager } from './TextureManager.js'
 import { Animator } from './Animator.js'
 
 const canvas = document.getElementById('fgfx_canvas')
+if (canvas) {
+  canvas.tabIndex = 0
+}
 const useWebGPU = !!window.FGFX_BACKEND_WEBGPU
 const glAttrs = { alpha: true }
 const gl = useWebGPU ? null : canvas.getContext('webgl2', glAttrs)
@@ -91,3 +94,52 @@ const animateFgfx = (time, delta) => {
   }
   window.Module._fgfx_render(time, delta, canvas.width, canvas.height, canvas.clientWidth * 0.264, canvas.clientHeight * 0.264)
 }
+
+function glfwKeyFromEvent(e) {
+  if (e.code === 'ArrowRight') return 262
+  if (e.code === 'ArrowLeft') return 263
+  if (e.code === 'ArrowDown') return 264
+  if (e.code === 'ArrowUp') return 265
+  if (e.code === 'Escape') return 256
+  if (e.key && e.key.length === 1) {
+    return e.key.toUpperCase().charCodeAt(0)
+  }
+  return -1
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) return
+  const fn = window.Module && window.Module._fgfx_key_event
+  if (!fn) return
+  const key = glfwKeyFromEvent(e)
+  if (key < 0) return
+  fn(key, 1)
+})
+
+window.addEventListener('keyup', (e) => {
+  const fn = window.Module && window.Module._fgfx_key_event
+  if (!fn) return
+  const key = glfwKeyFromEvent(e)
+  if (key < 0) return
+  fn(key, 0)
+})
+
+window.addEventListener('mousemove', (e) => {
+  const fn = window.Module && window.Module._fgfx_mouse_move
+  if (!fn || !canvas) return
+  const rect = canvas.getBoundingClientRect()
+  fn(e.clientX - rect.left, e.clientY - rect.top)
+})
+
+window.addEventListener('mousedown', (e) => {
+  const fn = window.Module && window.Module._fgfx_mouse_button
+  if (!fn) return
+  fn(e.button, 1)
+})
+
+window.addEventListener('mouseup', (e) => {
+  const fn = window.Module && window.Module._fgfx_mouse_button
+  if (!fn) return
+  fn(e.button, 0)
+})
+
