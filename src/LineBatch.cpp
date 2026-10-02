@@ -95,6 +95,7 @@ LineBatch::~LineBatch() {
     backend->destroyBuffer(positionBuf_);
     backend->destroyBuffer(colorBuf_);
   }
+  uploads_.destroyAll(backend);
 }
 
 void LineBatch::ensurePipeline() {
@@ -144,20 +145,24 @@ void LineBatch::record(RenderPass& pass, FrameContext& ctx) {
   if (pointCount_ == 0) return;
   ensurePipeline();
   RenderBackend* backend = engine_->getBackend();
+  uploads_.gc(engine_ ? engine_->frameIndex : 0, backend);
+
+  if (gpuBuffersCreated_) {
+    uploads_.retire(positionBuf_, colorBuf_);
+    positionBuf_ = kNullBuffer;
+    colorBuf_ = kNullBuffer;
+    positionBufSize_ = 0;
+    colorBufSize_ = 0;
+    gpuBuffersCreated_ = false;
+  }
 
   int posSize = static_cast<int>(pointCount_ * sizeof(glm::vec3));
   int colSize = static_cast<int>(pointCount_ * sizeof(glm::vec4));
 
-  if (!gpuBuffersCreated_ || posSize > positionBufSize_) {
-    if (gpuBuffersCreated_) backend->destroyBuffer(positionBuf_);
-    positionBuf_ = backend->createBuffer({posSize, BufferUsage::Vertex});
-    positionBufSize_ = posSize;
-  }
-  if (!gpuBuffersCreated_ || colSize > colorBufSize_) {
-    if (gpuBuffersCreated_) backend->destroyBuffer(colorBuf_);
-    colorBuf_ = backend->createBuffer({colSize, BufferUsage::Vertex});
-    colorBufSize_ = colSize;
-  }
+  positionBuf_ = backend->createBuffer({posSize, BufferUsage::Vertex});
+  positionBufSize_ = posSize;
+  colorBuf_ = backend->createBuffer({colSize, BufferUsage::Vertex});
+  colorBufSize_ = colSize;
   gpuBuffersCreated_ = true;
 
   backend->updateBuffer(positionBuf_, positions_.data(), posSize);

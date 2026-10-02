@@ -2,6 +2,7 @@
 #define FGFX_LINE_BATCH_HPP
 
 #include "backend/BackendTypes.hpp"
+#include "BatchGpu.hpp"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -34,6 +35,7 @@ class LineBatch {
   int positionBufSize_ = 0;
   int colorBufSize_ = 0;
   bool gpuBuffersCreated_ = false;
+  GpuUploadEpoch uploads_;
 
   void ensurePipeline();
 };

@@ -283,11 +283,19 @@ PipelineHandle WebGPUBackend::createPipeline(const PipelineDesc& desc) {
     vertexLayouts[i].attributes = vertexAttrs[i].data();
   }
 
-  // Blend state.
+  auto wgpuBlendOf = [](BlendFactor factor) {
+    switch (factor) {
+      case BlendFactor::One: return WGPUBlendFactor_One;
+      case BlendFactor::Zero: return WGPUBlendFactor_Zero;
+      case BlendFactor::SrcAlpha: return WGPUBlendFactor_SrcAlpha;
+      case BlendFactor::OneMinusSrcAlpha: return WGPUBlendFactor_OneMinusSrcAlpha;
+    }
+    return WGPUBlendFactor_SrcAlpha;
+  };
   WGPUBlendComponent blendComponent = WGPU_BLEND_COMPONENT_INIT;
   blendComponent.operation = WGPUBlendOperation_Add;
-  blendComponent.srcFactor = WGPUBlendFactor_SrcAlpha;
-  blendComponent.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+  blendComponent.srcFactor = wgpuBlendOf(desc.blend.srcColor);
+  blendComponent.dstFactor = wgpuBlendOf(desc.blend.dstColor);
   WGPUBlendState blendState = WGPU_BLEND_STATE_INIT;
   blendState.color = blendComponent;
   blendState.alpha = blendComponent;
@@ -297,7 +305,7 @@ PipelineHandle WebGPUBackend::createPipeline(const PipelineDesc& desc) {
   colorTarget.format = (desc.targetFormat == PixelFormat::BGRA8Unorm)
       ? surfaceFormat_
       : textureFormatOf(desc.targetFormat);
-  colorTarget.blend = &blendState;
+  colorTarget.blend = desc.blend.enabled ? &blendState : nullptr;
 
   WGPUFragmentState fragmentState = WGPU_FRAGMENT_STATE_INIT;
   WGPUShaderModule sm = *info.shaderModule;

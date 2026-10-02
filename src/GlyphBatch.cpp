@@ -177,6 +177,7 @@ GlyphBatch::~GlyphBatch() {
       backend->destroyBuffer(buf.coordBuf);
     }
   }
+  uploads_.destroyAll(backend);
 }
 
 void GlyphBatch::setPxRange(float range) { pxRange_ = range; }
@@ -303,6 +304,7 @@ void GlyphBatch::reset() {
 void GlyphBatch::record(RenderPass& pass, FrameContext& ctx) {
   ensurePipeline();
   RenderBackend* backend = engine_->getBackend();
+  uploads_.gc(engine_ ? engine_->frameIndex : 0, backend);
   MsdfUbo ubo;
   ubo.matrix = ctx.mvp.multipliedMatrix;
   ubo.pxRange = pxRange_;
@@ -314,31 +316,27 @@ void GlyphBatch::record(RenderPass& pass, FrameContext& ctx) {
   for (auto& buf : buffers_) {
     if (buf.pointCount == 0) continue;
 
+    if (buf.gpuBuffersCreated) {
+      uploads_.retire(buf.positionBuf, buf.colorBuf, buf.coordBuf);
+      buf.positionBuf = kNullBuffer;
+      buf.colorBuf = kNullBuffer;
+      buf.coordBuf = kNullBuffer;
+      buf.positionBufSize = 0;
+      buf.colorBufSize = 0;
+      buf.coordBufSize = 0;
+      buf.gpuBuffersCreated = false;
+    }
+
     int posSize = static_cast<int>(buf.pointCount * sizeof(glm::vec3));
     int colSize = static_cast<int>(buf.pointCount * sizeof(glm::vec4));
     int crdSize = static_cast<int>(buf.pointCount * sizeof(glm::vec2));
 
-    if (!buf.gpuBuffersCreated || posSize > buf.positionBufSize) {
-      if (buf.gpuBuffersCreated) {
-        backend->destroyBuffer(buf.positionBuf);
-      }
-      buf.positionBuf = backend->createBuffer({posSize, BufferUsage::Vertex});
-      buf.positionBufSize = posSize;
-    }
-    if (!buf.gpuBuffersCreated || colSize > buf.colorBufSize) {
-      if (buf.gpuBuffersCreated) {
-        backend->destroyBuffer(buf.colorBuf);
-      }
-      buf.colorBuf = backend->createBuffer({colSize, BufferUsage::Vertex});
-      buf.colorBufSize = colSize;
-    }
-    if (!buf.gpuBuffersCreated || crdSize > buf.coordBufSize) {
-      if (buf.gpuBuffersCreated) {
-        backend->destroyBuffer(buf.coordBuf);
-      }
-      buf.coordBuf = backend->createBuffer({crdSize, BufferUsage::Vertex});
-      buf.coordBufSize = crdSize;
-    }
+    buf.positionBuf = backend->createBuffer({posSize, BufferUsage::Vertex});
+    buf.positionBufSize = posSize;
+    buf.colorBuf = backend->createBuffer({colSize, BufferUsage::Vertex});
+    buf.colorBufSize = colSize;
+    buf.coordBuf = backend->createBuffer({crdSize, BufferUsage::Vertex});
+    buf.coordBufSize = crdSize;
     buf.gpuBuffersCreated = true;
 
     backend->updateBuffer(buf.positionBuf, buf.positions.data(), posSize);

@@ -3,6 +3,7 @@
 
 #include "Sprite.hpp"
 #include "backend/BackendTypes.hpp"
+#include "BatchGpu.hpp"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -51,6 +52,7 @@ class GlyphBatch {
   Engine* engine_;
   PipelineHandle pipeline_ = kNullPipeline;
   std::vector<Buffer> buffers_;
+  GpuUploadEpoch uploads_;
   float pxRange_ = 4.0f;
   glm::vec2 atlasSize_ = glm::vec2(1.0f, 1.0f);
 

@@ -79,6 +79,9 @@ class WebGLBackend : public RenderBackend {
     std::unordered_map<int, std::vector<AttrInfo>> bindingAttrs;
     GLint samplerLocation = -1;
     GLenum topology = GL_TRIANGLES;
+    bool blendEnabled = true;
+    GLenum blendSrc = GL_SRC_ALPHA;
+    GLenum blendDst = GL_ONE_MINUS_SRC_ALPHA;
   };
 
   std::unordered_map<GLuint, PipelineInfo> pipelines_;

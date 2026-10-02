@@ -8,6 +8,7 @@
 #include "shaders.hpp"
 #include "backend/BackendTypes.hpp"
 
+#include <cstdint>
 #include <map>
 #include <vector>
 #include <string>
@@ -72,6 +73,7 @@ namespace fgfx {
 
     int width;
     int height;
+    uint64_t frameIndex = 0;
 
     double realWidth;
     double realHeight;

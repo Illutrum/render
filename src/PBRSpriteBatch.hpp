@@ -24,13 +24,16 @@ class PBRSpriteBatch {
   void rawBufferSprite(const std::shared_ptr<Sprite>& sprite, const glm::mat4& mat,
                        glm::vec4 color);
 
+  void setLightDir(glm::vec3 dir);
+  void setEyeDir(glm::vec3 dir);
+
   void reset();
   void record(RenderPass& pass, FrameContext& ctx);
 
  private:
   struct Buffer {
     int textureId = -1;
-    std::vector<glm::vec2> positions;
+    std::vector<glm::vec3> positions;
     std::vector<glm::vec2> normals;
     std::vector<glm::vec4> colors;
     std::vector<glm::vec2> colorCoords;
@@ -55,10 +58,12 @@ class PBRSpriteBatch {
   Engine* engine_;
   PipelineHandle pipeline_ = kNullPipeline;
   std::vector<Buffer> buffers_;
+  glm::vec3 lightDir_{1.0f, 5.0f, 4.0f};
+  glm::vec3 eyeDir_{0.0f, 0.0f, 1.0f};
 
   Buffer& getBuffer(int textureId);
   void ensurePipeline();
-  void bufferPoint(Buffer& buf, glm::vec2 pos, glm::vec2 normal, glm::vec4 color,
+  void bufferPoint(Buffer& buf, glm::vec3 pos, glm::vec2 normal, glm::vec4 color,
                    glm::vec2 colorCoord, glm::vec2 normalCoord,
                    glm::vec2 materialCoord);
 };

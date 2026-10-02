@@ -6,6 +6,7 @@
 
 #include "Sprite.hpp"
 #include "backend/BackendTypes.hpp"
+#include "BatchGpu.hpp"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -52,6 +53,7 @@ class SpriteBatch {
   Engine* engine_;
   PipelineHandle pipeline_ = kNullPipeline;
   std::vector<Buffer> buffers_;
+  GpuUploadEpoch uploads_;
 
   Buffer& getBuffer(int textureId);
   void ensurePipeline();

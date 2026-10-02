@@ -10,14 +10,16 @@ namespace fgfx {
 namespace {
 #ifdef __USE_OPENGL
 constexpr const char* kVertexGLSL = R"(#version 330
-in vec2 aPosition;
+in vec3 aPosition;
 in vec2 aNormal;
 in vec4 aColor;
 in vec2 aColorCoord;
 in vec2 aNormalCoord;
 in vec2 aMaterialCoord;
 layout(std140) uniform Camera {
-  mat4 matrix;
+    mat4 matrix;
+    vec4 lightDir;
+    vec4 eyeDir;
 };
 out vec2 vNormal;
 out vec4 vColor;
@@ -25,7 +27,7 @@ out vec2 vColorCoord;
 out vec2 vNormalCoord;
 out vec2 vMaterialCoord;
 void main() {
-  gl_Position = matrix * vec4(aPosition, 0.0, 1.0);
+  gl_Position = matrix * vec4(aPosition, 1.0);
   vNormal = aNormal;
   vColor = aColor;
   vColorCoord = aColorCoord;
@@ -41,16 +43,21 @@ in vec2 vColorCoord;
 in vec2 vNormalCoord;
 in vec2 vMaterialCoord;
 uniform sampler2D uSampler;
+layout(std140) uniform Camera {
+    mat4 matrix;
+    vec4 lightDir;
+    vec4 eyeDir;
+};
 out vec4 fragColor;
 
 vec3 environmentLight(vec3 dir, float roughness) {
-  vec3 sunDir = normalize(vec3(1.0, 5.0, 4.0));
-  vec3 sunColor = vec3(1.0, 0.9, 0.8) * 5.0;
-  vec3 sunHaloColor = vec3(1.0, 0.8, 0.5) * 0.023;
-  float sunSize = 0.046;
-  float sunBorder = 0.05;
-  vec3 skyColor = vec3(0.027, 0.571, 0.847) * (dir.y * 0.5 + 0.5);
-  vec3 groundColor = vec3(0.29, 0.23, 0.19) * (-dir.y * 0.7 + 0.3);
+  vec3 sunDir = normalize(lightDir.xyz);
+  vec3 sunColor = vec3(1.0, 0.95, 0.88) * 6.5;
+  vec3 sunHaloColor = vec3(1.0, 0.88, 0.65) * 0.18;
+  float sunSize = 0.08;
+  float sunBorder = 0.08;
+  vec3 skyColor = vec3(0.82, 0.86, 0.92) * (dir.y * 0.35 + 0.65);
+  vec3 groundColor = vec3(0.70, 0.62, 0.50) * (-dir.y * 0.25 + 0.75);
   float groundHeight = 0.0;
   float sunDistance = length(dir - sunDir);
   vec3 sunBeam = sunColor * (clamp((sunSize - sunDistance) / (sunBorder + roughness), -1.0, 1.0) * 0.5 + 0.5);
@@ -69,28 +76,36 @@ void main() {
   vec3 normalXAxis = vec3(normalYAxis.y, -normalYAxis.x, 0);
   normal = -normalXAxis * normal.x - normalYAxis * normal.y - vec3(0, 0, normal.z);
   normal.z = normal.z * -1.0;
-  vec3 eyeDir = normalize(vec3(0, 0, 1));
-  vec3 reflection = normalize(reflect(eyeDir, normal));
-  float roughness = textureMaterialPixel.r;
+  normal = normalize(normal);
+  vec3 eye = normalize(eyeDir.xyz);
+  vec3 light = normalize(lightDir.xyz);
+  vec3 halfV = normalize(light + eye);
+  vec3 reflection = normalize(reflect(-eye, normal));
+  float roughness = max(textureMaterialPixel.r, 0.04);
   float metallic = textureMaterialPixel.g;
   float occulsion = textureMaterialPixel.b;
+  float ndl = max(dot(normal, light), 0.0);
+  float spec = pow(max(dot(normal, halfV), 0.0), mix(12.0, 180.0, 1.0 - roughness)) * ndl;
   vec3 diffuse = color.rgb * (1.0 - metallic);
-  vec3 specular = mix(vec3(0.04), color.rgb, metallic);
-  vec3 envDiffuseColor = diffuse * environmentLight(normal, 2.0);
-  vec3 envSpecularColor = specular * environmentLight(reflection, roughness);
-  fragColor = vec4(occulsion * (envDiffuseColor + envSpecularColor), color.a * textureMaterialPixel.a);
+  vec3 specCol = mix(vec3(0.04), color.rgb, metallic);
+  vec3 lit = diffuse * (0.38 + 0.62 * ndl) + specCol * spec * (1.0 + 3.0 * metallic);
+  vec3 env = diffuse * environmentLight(normal, 2.0) * 0.75
+           + specCol * environmentLight(reflection, roughness) * 1.2;
+  fragColor = vec4(occulsion * (lit + env), color.a * textureMaterialPixel.a);
 }
 )";
 #else
 constexpr const char* kVertexGLSL = R"(#version 300 es
-in vec2 aPosition;
+in vec3 aPosition;
 in vec2 aNormal;
 in vec4 aColor;
 in vec2 aColorCoord;
 in vec2 aNormalCoord;
 in vec2 aMaterialCoord;
 layout(std140) uniform Camera {
-  mat4 matrix;
+    mat4 matrix;
+    vec4 lightDir;
+    vec4 eyeDir;
 };
 out vec2 vNormal;
 out vec4 vColor;
@@ -98,7 +113,7 @@ out highp vec2 vColorCoord;
 out highp vec2 vNormalCoord;
 out highp vec2 vMaterialCoord;
 void main() {
-  gl_Position = matrix * vec4(aPosition, 0.0, 1.0);
+  gl_Position = matrix * vec4(aPosition, 1.0);
   vNormal = aNormal;
   vColor = aColor;
   vColorCoord = aColorCoord;
@@ -115,16 +130,21 @@ in highp vec2 vColorCoord;
 in highp vec2 vNormalCoord;
 in highp vec2 vMaterialCoord;
 uniform sampler2D uSampler;
+layout(std140) uniform Camera {
+    mat4 matrix;
+    vec4 lightDir;
+    vec4 eyeDir;
+};
 out vec4 fragColor;
 
 vec3 environmentLight(vec3 dir, float roughness) {
-  vec3 sunDir = normalize(vec3(1.0, 5.0, 4.0));
-  vec3 sunColor = vec3(1.0, 0.9, 0.8) * 5.0;
-  vec3 sunHaloColor = vec3(1.0, 0.8, 0.5) * 0.023;
-  float sunSize = 0.046;
-  float sunBorder = 0.05;
-  vec3 skyColor = vec3(0.027, 0.571, 0.847) * (dir.y * 0.5 + 0.5);
-  vec3 groundColor = vec3(0.29, 0.23, 0.19) * (-dir.y * 0.7 + 0.3);
+  vec3 sunDir = normalize(lightDir.xyz);
+  vec3 sunColor = vec3(1.0, 0.95, 0.88) * 6.5;
+  vec3 sunHaloColor = vec3(1.0, 0.88, 0.65) * 0.18;
+  float sunSize = 0.08;
+  float sunBorder = 0.08;
+  vec3 skyColor = vec3(0.82, 0.86, 0.92) * (dir.y * 0.35 + 0.65);
+  vec3 groundColor = vec3(0.70, 0.62, 0.50) * (-dir.y * 0.25 + 0.75);
   float groundHeight = 0.0;
   float sunDistance = length(dir - sunDir);
   vec3 sunBeam = sunColor * (clamp((sunSize - sunDistance) / (sunBorder + roughness), -1.0, 1.0) * 0.5 + 0.5);
@@ -143,16 +163,22 @@ void main() {
   vec3 normalXAxis = vec3(normalYAxis.y, -normalYAxis.x, 0);
   normal = -normalXAxis * normal.x - normalYAxis * normal.y - vec3(0, 0, normal.z);
   normal.z = normal.z * -1.0;
-  vec3 eyeDir = normalize(vec3(0, 0, 1));
-  vec3 reflection = normalize(reflect(eyeDir, normal));
-  float roughness = textureMaterialPixel.r;
+  normal = normalize(normal);
+  vec3 eye = normalize(eyeDir.xyz);
+  vec3 light = normalize(lightDir.xyz);
+  vec3 halfV = normalize(light + eye);
+  vec3 reflection = normalize(reflect(-eye, normal));
+  float roughness = max(textureMaterialPixel.r, 0.04);
   float metallic = textureMaterialPixel.g;
   float occulsion = textureMaterialPixel.b;
+  float ndl = max(dot(normal, light), 0.0);
+  float spec = pow(max(dot(normal, halfV), 0.0), mix(12.0, 180.0, 1.0 - roughness)) * ndl;
   vec3 diffuse = color.rgb * (1.0 - metallic);
-  vec3 specular = mix(vec3(0.04), color.rgb, metallic);
-  vec3 envDiffuseColor = diffuse * environmentLight(normal, 2.0);
-  vec3 envSpecularColor = specular * environmentLight(reflection, roughness);
-  fragColor = vec4(occulsion * (envDiffuseColor + envSpecularColor), color.a * textureMaterialPixel.a);
+  vec3 specCol = mix(vec3(0.04), color.rgb, metallic);
+  vec3 lit = diffuse * (0.38 + 0.62 * ndl) + specCol * spec * (1.0 + 3.0 * metallic);
+  vec3 env = diffuse * environmentLight(normal, 2.0) * 0.75
+           + specCol * environmentLight(reflection, roughness) * 1.2;
+  fragColor = vec4(occulsion * (lit + env), color.a * textureMaterialPixel.a);
 }
 )";
 #endif
@@ -160,13 +186,15 @@ void main() {
 constexpr const char* kVertexWGSL = R"(
 struct Camera {
   matrix : mat4x4<f32>,
+  lightDir : vec4<f32>,
+  eyeDir : vec4<f32>,
 }
 @group(0) @binding(0) var<uniform> camera : Camera;
 @group(0) @binding(1) var uTexture : texture_2d<f32>;
 @group(0) @binding(2) var uSampler : sampler;
 
 struct VertexInput {
-  @location(0) position : vec2<f32>,
+  @location(0) position : vec3<f32>,
   @location(1) normal : vec2<f32>,
   @location(2) color : vec4<f32>,
   @location(3) colorCoord : vec2<f32>,
@@ -186,7 +214,7 @@ struct VertexOutput {
 @vertex
 fn vs_main(input : VertexInput) -> VertexOutput {
   var output : VertexOutput;
-  output.position = camera.matrix * vec4<f32>(input.position, 0.0, 1.0);
+  output.position = camera.matrix * vec4<f32>(input.position, 1.0);
   output.vNormal = input.normal;
   output.vColor = input.color;
   output.vColorCoord = input.colorCoord;
@@ -196,13 +224,13 @@ fn vs_main(input : VertexInput) -> VertexOutput {
 }
 
 fn environmentLight(dir : vec3<f32>, roughness : f32) -> vec3<f32> {
-  let sunDir = normalize(vec3<f32>(1.0, 5.0, 4.0));
-  let sunColor = vec3<f32>(1.0, 0.9, 0.8) * 5.0;
-  let sunHaloColor = vec3<f32>(1.0, 0.8, 0.5) * 0.023;
-  let sunSize = 0.046;
-  let sunBorder = 0.05;
-  var skyColor = vec3<f32>(0.027, 0.571, 0.847) * (dir.y * 0.5 + 0.5);
-  let groundColor = vec3<f32>(0.29, 0.23, 0.19) * (-dir.y * 0.7 + 0.3);
+  let sunDir = normalize(camera.lightDir.xyz);
+  let sunColor = vec3<f32>(1.0, 0.95, 0.88) * 6.5;
+  let sunHaloColor = vec3<f32>(1.0, 0.88, 0.65) * 0.18;
+  let sunSize = 0.08;
+  let sunBorder = 0.08;
+  var skyColor = vec3<f32>(0.82, 0.86, 0.92) * (dir.y * 0.35 + 0.65);
+  let groundColor = vec3<f32>(0.70, 0.62, 0.50) * (-dir.y * 0.25 + 0.75);
   let groundHeight = 0.0;
   let sunDistance = length(dir - sunDir);
   let sunBeam = sunColor * (clamp((sunSize - sunDistance) / (sunBorder + roughness), -1.0, 1.0) * 0.5 + 0.5);
@@ -221,22 +249,50 @@ fn fs_main(input : VertexOutput) -> @location(0) vec4<f32> {
   let normalYAxis = vec3<f32>(input.vNormal.x, input.vNormal.y, 0.0);
   let normalXAxis = vec3<f32>(normalYAxis.y, -normalYAxis.x, 0.0);
   normal = -normalXAxis * normal.x - normalYAxis * normal.y - vec3<f32>(0.0, 0.0, normal.z);
-  normal = vec3<f32>(normal.x, normal.y, normal.z * -1.0);
-  let eyeDir = normalize(vec3<f32>(0.0, 0.0, 1.0));
-  let reflection = normalize(reflect(eyeDir, normal));
-  let roughness = textureMaterialPixel.r;
+  normal = normalize(vec3<f32>(normal.x, normal.y, normal.z * -1.0));
+  let eye = normalize(camera.eyeDir.xyz);
+  let light = normalize(camera.lightDir.xyz);
+  let halfV = normalize(light + eye);
+  let reflection = normalize(reflect(-eye, normal));
+  let roughness = max(textureMaterialPixel.r, 0.04);
   let metallic = textureMaterialPixel.g;
   let occulsion = textureMaterialPixel.b;
+  let ndl = max(dot(normal, light), 0.0);
+  let spec = pow(max(dot(normal, halfV), 0.0), mix(12.0, 180.0, 1.0 - roughness)) * ndl;
   let diffuse = color.rgb * (1.0 - metallic);
-  let specular = mix(vec3<f32>(0.04), color.rgb, metallic);
-  let envDiffuseColor = diffuse * environmentLight(normal, 2.0);
-  let envSpecularColor = specular * environmentLight(reflection, roughness);
-  return vec4<f32>(occulsion * (envDiffuseColor + envSpecularColor), color.a * textureMaterialPixel.a);
+  let specCol = mix(vec3<f32>(0.04), color.rgb, metallic);
+  let lit = diffuse * (0.38 + 0.62 * ndl) + specCol * spec * (1.0 + 3.0 * metallic);
+  let env = diffuse * environmentLight(normal, 2.0) * 0.75
+          + specCol * environmentLight(reflection, roughness) * 1.2;
+  return vec4<f32>(occulsion * (lit + env), color.a * textureMaterialPixel.a);
 }
 )";
+
+struct PbrUbo {
+  glm::mat4 matrix;
+  glm::vec4 lightDir; // xyz, w unused
+  glm::vec4 eyeDir;
+};
+static_assert(sizeof(PbrUbo) == 96, "PBR UBO must be 96 bytes (std140)");
 }  // namespace
 
 PBRSpriteBatch::PBRSpriteBatch(Engine* engine) : engine_(engine) {}
+
+void PBRSpriteBatch::setLightDir(glm::vec3 dir) {
+  if (glm::length(dir) < 1e-5f) {
+    lightDir_ = glm::vec3(1.0f, 5.0f, 4.0f);
+    return;
+  }
+  lightDir_ = glm::normalize(dir);
+}
+
+void PBRSpriteBatch::setEyeDir(glm::vec3 dir) {
+  if (glm::length(dir) < 1e-5f) {
+    eyeDir_ = glm::vec3(0.0f, 0.0f, 1.0f);
+    return;
+  }
+  eyeDir_ = glm::normalize(dir);
+}
 
 PBRSpriteBatch::~PBRSpriteBatch() {
   RenderBackend* backend = engine_ ? engine_->getBackend() : nullptr;
@@ -275,12 +331,12 @@ void PBRSpriteBatch::ensurePipeline() {
   desc.blend.srcColor = BlendFactor::SrcAlpha;
   desc.blend.dstColor = BlendFactor::OneMinusSrcAlpha;
   desc.topology = PrimitiveTopology::TriangleList;
-  desc.uniformSize = 64;
+  desc.uniformSize = 96;
   desc.hasTexture = true;
   VertexBinding posBinding;
   posBinding.binding = 0;
-  posBinding.stride = sizeof(glm::vec2);
-  posBinding.attributes.push_back({0, 0, PixelFormat::RG32Float, "aPosition"});
+  posBinding.stride = sizeof(glm::vec3);
+  posBinding.attributes.push_back({0, 0, PixelFormat::RGB32Float, "aPosition"});
   desc.vertexBindings.push_back(posBinding);
   VertexBinding normalBinding;
   normalBinding.binding = 1;
@@ -310,7 +366,7 @@ void PBRSpriteBatch::ensurePipeline() {
   pipeline_ = engine_->getBackend()->createPipeline(desc);
 }
 
-void PBRSpriteBatch::bufferPoint(Buffer& buf, glm::vec2 pos, glm::vec2 normal,
+void PBRSpriteBatch::bufferPoint(Buffer& buf, glm::vec3 pos, glm::vec2 normal,
                                  glm::vec4 color, glm::vec2 colorCoord,
                                  glm::vec2 normalCoord, glm::vec2 materialCoord) {
   buf.positions.push_back(pos);
@@ -329,11 +385,17 @@ void PBRSpriteBatch::bufferSprite(const std::shared_ptr<Sprite>& sprite,
   Buffer& buf = getBuffer(sprite->textureId);
 
   auto r = sprite->ratio * 3;
-  glm::vec2 normal = glm::normalize(glm::vec2(glm::mat3(mat) * glm::vec3(0, 1, 0)));
-  glm::vec2 p1 = glm::vec2(mat * glm::vec4(-1 * r, -1, 0, 1));
-  glm::vec2 p2 = glm::vec2(mat * glm::vec4(1 * r, -1, 0, 1));
-  glm::vec2 p3 = glm::vec2(mat * glm::vec4(1 * r, 1, 0, 1));
-  glm::vec2 p4 = glm::vec2(mat * glm::vec4(-1 * r, 1, 0, 1));
+  glm::vec3 up = glm::mat3(mat) * glm::vec3(0, 1, 0);
+  glm::vec2 normal = glm::vec2(up);
+  if (glm::length(normal) < 1e-5f) {
+    normal = glm::vec2(0.0f, 1.0f);
+  } else {
+    normal = glm::normalize(normal);
+  }
+  glm::vec3 p1 = glm::vec3(mat * glm::vec4(-1 * r, -1, 0, 1));
+  glm::vec3 p2 = glm::vec3(mat * glm::vec4(1 * r, -1, 0, 1));
+  glm::vec3 p3 = glm::vec3(mat * glm::vec4(1 * r, 1, 0, 1));
+  glm::vec3 p4 = glm::vec3(mat * glm::vec4(-1 * r, 1, 0, 1));
 
   glm::vec2 colorCoords[4] = {
       sprite->coords[0],
@@ -369,10 +431,10 @@ void PBRSpriteBatch::rawBufferSprite(const std::shared_ptr<Sprite>& sprite,
   Buffer& buf = getBuffer(sprite->textureId);
 
   glm::vec2 normal = glm::normalize(glm::vec2(mat * glm::vec4(1, 0, 0, 0)));
-  glm::vec2 p1 = glm::vec2(mat * glm::vec4(-1, -1, 0, 1));
-  glm::vec2 p2 = glm::vec2(mat * glm::vec4(1, -1, 0, 1));
-  glm::vec2 p3 = glm::vec2(mat * glm::vec4(1, 1, 0, 1));
-  glm::vec2 p4 = glm::vec2(mat * glm::vec4(-1, 1, 0, 1));
+  glm::vec3 p1 = glm::vec3(mat * glm::vec4(-1, -1, 0, 1));
+  glm::vec3 p2 = glm::vec3(mat * glm::vec4(1, -1, 0, 1));
+  glm::vec3 p3 = glm::vec3(mat * glm::vec4(1, 1, 0, 1));
+  glm::vec3 p4 = glm::vec3(mat * glm::vec4(-1, 1, 0, 1));
 
   glm::vec2 colorCoords[4] = {
       sprite->coords[0],
@@ -416,13 +478,16 @@ void PBRSpriteBatch::reset() {
 void PBRSpriteBatch::record(RenderPass& pass, FrameContext& ctx) {
   ensurePipeline();
   RenderBackend* backend = engine_->getBackend();
-  glm::mat4 mvp = ctx.mvp.multipliedMatrix;
+  PbrUbo ubo;
+  ubo.matrix = ctx.mvp.multipliedMatrix;
+  ubo.lightDir = glm::vec4(lightDir_, 0.0f);
+  ubo.eyeDir = glm::vec4(eyeDir_, 0.0f);
   uint32_t uniformOffset =
-      ctx.uniforms->alloc(&mvp, static_cast<int>(sizeof(mvp)));
+      ctx.uniforms->alloc(&ubo, static_cast<int>(sizeof(ubo)));
   for (auto& buf : buffers_) {
     if (buf.pointCount == 0) continue;
 
-    int posSize = static_cast<int>(buf.pointCount * sizeof(glm::vec2));
+    int posSize = static_cast<int>(buf.pointCount * sizeof(glm::vec3));
     int nrmSize = static_cast<int>(buf.pointCount * sizeof(glm::vec2));
     int colSize = static_cast<int>(buf.pointCount * sizeof(glm::vec4));
     int ccSize = static_cast<int>(buf.pointCount * sizeof(glm::vec2));
@@ -472,7 +537,7 @@ void PBRSpriteBatch::record(RenderPass& pass, FrameContext& ctx) {
     dc.pipeline = pipeline_;
     dc.uniformBinding = 0;
     dc.uniformOffset = uniformOffset;
-    dc.uniformSize = static_cast<uint16_t>(sizeof(glm::mat4));
+    dc.uniformSize = static_cast<uint16_t>(sizeof(PbrUbo));
     dc.textureBinding = 0;
     dc.texture = static_cast<TextureHandle>(buf.textureId);
     dc.vertexBuffers.push_back({0, buf.positionBuf});

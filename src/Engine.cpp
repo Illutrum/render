@@ -245,6 +245,7 @@ namespace fgfx {
   }
 
   void Engine::render(double time, float delta, int widthp, int heightp) {
+    ++frameIndex;
     width = widthp;
     height = heightp;
 #ifndef FGFX_BACKEND_WEBGPU

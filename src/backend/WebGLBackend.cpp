@@ -23,6 +23,16 @@ GlFormat glFormatOf(PixelFormat f) {
   return {4, GL_FLOAT};
 }
 
+GLenum glBlendOf(BlendFactor factor) {
+  switch (factor) {
+    case BlendFactor::One: return GL_ONE;
+    case BlendFactor::Zero: return GL_ZERO;
+    case BlendFactor::SrcAlpha: return GL_SRC_ALPHA;
+    case BlendFactor::OneMinusSrcAlpha: return GL_ONE_MINUS_SRC_ALPHA;
+  }
+  return GL_SRC_ALPHA;
+}
+
 GLenum glUsageOf(BufferUsage u) {
   switch (u) {
     case BufferUsage::Vertex:  return GL_ARRAY_BUFFER;
@@ -97,6 +107,9 @@ PipelineHandle WebGLBackend::createPipeline(const PipelineDesc& desc) {
     info.bindingAttrs[vb.binding] = std::move(attrs);
   }
   info.samplerLocation = glGetUniformLocation(prog, "uSampler");
+  info.blendEnabled = desc.blend.enabled;
+  info.blendSrc = glBlendOf(desc.blend.srcColor);
+  info.blendDst = glBlendOf(desc.blend.dstColor);
   GLint numBlocks = 0;
   glGetProgramiv(prog, GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
   if (numBlocks > 0) {
@@ -227,6 +240,9 @@ void WebGLBackend::beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,
                                     int viewportH, TextureHandle depthTarget) {
   (void)depthTarget;
   bindColorTarget(colorTarget, viewportW, viewportH);
+  glDisable(GL_DEPTH_TEST);
+  glDepthMask(GL_FALSE);
+  glDisable(GL_CULL_FACE);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   if (loadOp == LoadOp::Clear) {
@@ -261,6 +277,12 @@ void WebGLBackend::bindPipeline(PipelineHandle pipeline) {
   // Bind sampler to unit 0 for the spike.
   if (it->second.samplerLocation >= 0) {
     glUniform1i(it->second.samplerLocation, 0);
+  }
+  if (it->second.blendEnabled) {
+    glEnable(GL_BLEND);
+    glBlendFunc(it->second.blendSrc, it->second.blendDst);
+  } else {
+    glDisable(GL_BLEND);
   }
 }
 
