@@ -81,6 +81,9 @@ class WebGPUBackend : public RenderBackend {
   void updateTexture(TextureHandle texture, int width, int height,
                      const void* data) override;
   void destroyTexture(TextureHandle texture) override;
+  void generateMipmaps(TextureHandle texture) override;
+  void setColorTargetSampling(TextureHandle texture,
+                              float maxAnisotropy) override;
 
   void beginFrame() override;
   void beginRenderPass(TextureHandle colorTarget, LoadOp loadOp,

@@ -450,6 +450,16 @@ void WebGPUBackend::destroyTexture(TextureHandle texture) {
   }
 }
 
+void WebGPUBackend::generateMipmaps(TextureHandle texture) {
+  (void)texture;
+}
+
+void WebGPUBackend::setColorTargetSampling(TextureHandle texture,
+                                           float maxAnisotropy) {
+  (void)texture;
+  (void)maxAnisotropy;
+}
+
 void WebGPUBackend::beginFrame() {
   bindGroupCache_.clear();
   resetUniformRing();

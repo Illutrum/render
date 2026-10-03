@@ -43,6 +43,9 @@ class WebGLBackend : public RenderBackend {
   void updateTexture(TextureHandle texture, int width, int height,
                      const void* data) override;
   void destroyTexture(TextureHandle texture) override;
+  void generateMipmaps(TextureHandle texture) override;
+  void setColorTargetSampling(TextureHandle texture,
+                              float maxAnisotropy) override;
 
   GLuint ensureFramebuffer(TextureHandle texture);
   void bindColorTarget(TextureHandle texture, int viewportW, int viewportH);

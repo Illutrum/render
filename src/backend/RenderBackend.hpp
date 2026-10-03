@@ -42,6 +42,9 @@ class RenderBackend {
   virtual void updateTexture(TextureHandle texture, int width, int height,
                              const void* data) = 0;
   virtual void destroyTexture(TextureHandle texture) = 0;
+  virtual void generateMipmaps(TextureHandle texture) = 0;
+  virtual void setColorTargetSampling(TextureHandle texture,
+                                      float maxAnisotropy) = 0;
 
   // --- Frame / pass -------------------------------------------------------
   // colorTarget == kNullTexture means the surface (default framebuffer /

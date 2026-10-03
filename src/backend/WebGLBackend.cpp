@@ -4,6 +4,7 @@
 #include "WebGLBackend.hpp"
 #include "../shaders.hpp"
 
+#include <algorithm>
 #include <glm/glm.hpp>
 
 namespace fgfx {
@@ -188,6 +189,37 @@ void WebGLBackend::destroyTexture(TextureHandle texture) {
     fboCache_.erase(it);
   }
   glDeleteTextures(1, &tex);
+}
+
+void WebGLBackend::generateMipmaps(TextureHandle texture) {
+  if (texture == kNullTexture) {
+    return;
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void WebGLBackend::setColorTargetSampling(TextureHandle texture,
+                                          float maxAnisotropy) {
+  if (texture == kNullTexture) {
+    return;
+  }
+  glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+#ifdef GL_TEXTURE_MAX_ANISOTROPY_EXT
+  GLfloat cap = 1.0f;
+  glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &cap);
+  float aniso = std::min(maxAnisotropy, static_cast<float>(cap));
+  if (aniso > 1.0f) {
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
+  }
+#else
+  (void)maxAnisotropy;
+#endif
+  glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 GLuint WebGLBackend::ensureFramebuffer(TextureHandle texture) {
