@@ -56,6 +56,8 @@ function bindFgfxGlContext() {
 }
 
 window.Module = window.Module ?? {}
+let fgfxRuntimeReady = false
+
 window.Module.initializeFastGfxRuntime = function () {
   console.log('INIT!', useWebGPU ? 'WebGPU' : 'WebGL2')
   if (!useWebGPU) {
@@ -71,6 +73,7 @@ window.Module.initializeFastGfxRuntime = function () {
     }
     bindFgfxGlContext()
   }
+  fgfxRuntimeReady = true
 }
 
 window.Module.initializeFastGfxTextureManager = function () {
@@ -78,9 +81,17 @@ window.Module.initializeFastGfxTextureManager = function () {
   animator.addAnimation(animateFgfx)
 }
 
+function wasmFn(name) {
+  const m = window.Module
+  if (!fgfxRuntimeReady || !m || !m.calledRun) return undefined
+  const fn = m[name]
+  return typeof fn === 'function' ? fn : undefined
+}
+
 const pixelRatio = window.devicePixelRatio ?? 1
 const animateFgfx = (time, delta) => {
-  if (!textureManager || !window.Module._fgfx_render) return
+  const render = wasmFn('_fgfx_render')
+  if (!textureManager || !render) return
   textureManager.reload()
   if (!useWebGPU) bindFgfxGlContext()
 
@@ -92,7 +103,7 @@ const animateFgfx = (time, delta) => {
     if (gl) gl.viewport(0, 0, canvas.width, canvas.height)
     console.log('CANVAS RESIZE', canvas.width, canvas.height, pixelRatio)
   }
-  window.Module._fgfx_render(time, delta, canvas.width, canvas.height, canvas.clientWidth * 0.264, canvas.clientHeight * 0.264)
+  render(time, delta, canvas.width, canvas.height, canvas.clientWidth * 0.264, canvas.clientHeight * 0.264)
 }
 
 function glfwKeyFromEvent(e) {
@@ -109,7 +120,7 @@ function glfwKeyFromEvent(e) {
 
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return
-  const fn = window.Module && window.Module._fgfx_key_event
+  const fn = wasmFn('_fgfx_key_event')
   if (!fn) return
   const key = glfwKeyFromEvent(e)
   if (key < 0) return
@@ -117,7 +128,7 @@ window.addEventListener('keydown', (e) => {
 })
 
 window.addEventListener('keyup', (e) => {
-  const fn = window.Module && window.Module._fgfx_key_event
+  const fn = wasmFn('_fgfx_key_event')
   if (!fn) return
   const key = glfwKeyFromEvent(e)
   if (key < 0) return
@@ -125,20 +136,20 @@ window.addEventListener('keyup', (e) => {
 })
 
 window.addEventListener('mousemove', (e) => {
-  const fn = window.Module && window.Module._fgfx_mouse_move
+  const fn = wasmFn('_fgfx_mouse_move')
   if (!fn || !canvas) return
   const rect = canvas.getBoundingClientRect()
   fn(e.clientX - rect.left, e.clientY - rect.top)
 })
 
 window.addEventListener('mousedown', (e) => {
-  const fn = window.Module && window.Module._fgfx_mouse_button
+  const fn = wasmFn('_fgfx_mouse_button')
   if (!fn) return
   fn(e.button, 1)
 })
 
 window.addEventListener('mouseup', (e) => {
-  const fn = window.Module && window.Module._fgfx_mouse_button
+  const fn = wasmFn('_fgfx_mouse_button')
   if (!fn) return
   fn(e.button, 0)
 })

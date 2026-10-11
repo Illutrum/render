@@ -14,7 +14,7 @@ Built from `js/` via Rollup (`npm run build`). Loaded by each example HTML befor
 Responsibilities:
 
 - WebGL context on `#fgfx_canvas`
-- `TextureManager` — sprite atlas packing, font parsing, texture uploads
+- `TextureManager` — sprite atlas packing, font parsing, texture uploads. JS-created WebGL textures must go through `ModuleGL.getNewId(GL.textures)` (not `textures.length`); otherwise the next C++ `glGenTextures` overwrites the MSDF atlas.
 - Animation loop calling `Module._fgfx_render`
 
 Initialization hooks exported to wasm:

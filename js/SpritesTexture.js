@@ -1,3 +1,23 @@
+/** Register a JS-created WebGLTexture in Emscripten's GL.textures via getNewId.
+ *  textures.length is wrong: C++ glGenTextures uses the shared GL.counter, so a
+ *  length-based id is overwritten by the next gen and MSDF/sprites go missing. */
+export function registerEmscriptenTexture(webglTexture) {
+  const table = window.ModuleGL
+  if (!table || typeof table.getNewId !== 'function') {
+    throw new Error('ModuleGL.getNewId is required to register WebGL textures')
+  }
+  const textureId = table.getNewId(table.textures)
+  webglTexture.name = textureId
+  table.textures[textureId] = webglTexture
+  return textureId
+}
+
+export function applyRawUnpack(glCtx) {
+  glCtx.pixelStorei(glCtx.UNPACK_COLORSPACE_CONVERSION_WEBGL, glCtx.NONE)
+  glCtx.pixelStorei(glCtx.UNPACK_FLIP_Y_WEBGL, 0)
+  glCtx.pixelStorei(glCtx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0)
+}
+
 function STNode(x, y, width, height) {
   this.left = null
   this.right = null
@@ -52,10 +72,7 @@ function SpritesTexture(gl, size, spacing) {
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.LINEAR_MIPMAP_LINEAR)
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE)
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE)
-
-  while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
-  this.textureId = ModuleGL.textures.length
-  ModuleGL.textures.push(this.texture)
+  this.textureId = registerEmscriptenTexture(this.texture)
 }
 
 SpritesTexture.prototype.tryPack = function (sprites) {

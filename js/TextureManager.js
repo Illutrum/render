@@ -1,4 +1,5 @@
 import parseBmFont from 'parse-bmfont-ascii'
+import { SpritesTexture, registerEmscriptenTexture, applyRawUnpack } from './SpritesTexture.js'
 
 function parseBmFontXml(fntData) {
   const doc = new DOMParser().parseFromString(fntData, 'application/xml')
@@ -29,8 +30,6 @@ function parseBmFontData(fntData) {
   if (trimmed.startsWith('<')) return parseBmFontXml(fntData)
   return parseBmFont(fntData)
 }
-
-import { SpritesTexture } from './SpritesTexture.js'
 
 function TextureManager(gl, loader) {
   this.gl = gl
@@ -174,13 +173,12 @@ TextureManager.prototype.loadTexture = function (texture) {
     let tex
     if (textureId === -1) {
       tex = this.gl.createTexture()
-      while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
-      textureId = ModuleGL.textures.length
-      ModuleGL.textures[textureId] = tex
+      textureId = registerEmscriptenTexture(tex)
     } else {
       tex = ModuleGL.textures[textureId]
     }
     const glCtx = this.gl
+    applyRawUnpack(glCtx)
     glCtx.bindTexture(glCtx.TEXTURE_2D, tex)
     glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, glCtx.RGBA, glCtx.UNSIGNED_BYTE, image)
     glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.LINEAR)
@@ -236,6 +234,7 @@ TextureManager.prototype.uploadAtlasImage = function (image, withMipmaps) {
   }
   const glCtx = this.gl
   const texture = glCtx.createTexture()
+  applyRawUnpack(glCtx)
   glCtx.bindTexture(glCtx.TEXTURE_2D, texture)
   glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, glCtx.RGBA, glCtx.UNSIGNED_BYTE, image)
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.LINEAR)
@@ -247,11 +246,7 @@ TextureManager.prototype.uploadAtlasImage = function (image, withMipmaps) {
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_S, glCtx.CLAMP_TO_EDGE)
   glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_WRAP_T, glCtx.CLAMP_TO_EDGE)
   if (withMipmaps) glCtx.generateMipmap(glCtx.TEXTURE_2D)
-
-  while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
-  const textureId = ModuleGL.textures.length
-  ModuleGL.textures.push(texture)
-  return textureId
+  return registerEmscriptenTexture(texture)
 }
 
 TextureManager.prototype.uploadPackedSpriteFont = function (spriteFont, fntData, image, fontName) {
@@ -299,6 +294,7 @@ TextureManager.prototype.uploadPackedMSDFFont = function (msdfFont, fntData, ima
   const w = image.width
   const h = image.height
   const textureId = this.uploadAtlasImage(image, false)
+  console.info('MSDF ATLAS', name, 'glId', textureId, image.width, 'x', image.height)
 
   for (let i = 0, l = data.chars.length; i < l; i++) {
     const char = data.chars[i]
@@ -357,15 +353,14 @@ TextureManager.prototype.loadPackedSprites = function (sprites, imageUrl) {
     (function (image) {
       const glCtx = this.gl
       const texture = glCtx.createTexture()
+      applyRawUnpack(glCtx)
       glCtx.bindTexture(glCtx.TEXTURE_2D, texture)
       glCtx.texImage2D(glCtx.TEXTURE_2D, 0, glCtx.RGBA, glCtx.RGBA, glCtx.UNSIGNED_BYTE, image)
       glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MAG_FILTER, glCtx.LINEAR)
       glCtx.texParameteri(glCtx.TEXTURE_2D, glCtx.TEXTURE_MIN_FILTER, glCtx.LINEAR_MIPMAP_LINEAR)
       glCtx.generateMipmap(glCtx.TEXTURE_2D)
 
-      while (ModuleGL.textures.length === 0) ModuleGL.textures.push(null)
-      const textureId = ModuleGL.textures.length
-      ModuleGL.textures.push(texture)
+      const textureId = registerEmscriptenTexture(texture)
       console.debug('LOADED SPRITES TEXTURE', textureId)
       for (const k in sprites) {
         console.debug('SPRITE LOADED', k)

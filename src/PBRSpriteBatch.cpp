@@ -123,7 +123,7 @@ void main() {
 )";
 
 constexpr const char* kFragmentGLSL = R"(#version 300 es
-precision mediump float;
+precision highp float;
 in vec2 vNormal;
 in vec4 vColor;
 in highp vec2 vColorCoord;
