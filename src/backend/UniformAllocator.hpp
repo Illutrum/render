@@ -9,7 +9,7 @@
 
 #include <cstdint>
 
-namespace fgfx {
+namespace render {
 
 class UniformAllocator {
  public:
@@ -28,13 +28,13 @@ class UniformAllocator {
     }
     auto bytes = static_cast<uint32_t>(size);
     if (bytes > capacity_) {
-      fgfx_log("UniformAllocator: alloc size %d exceeds ring capacity %u",
+      render_log("UniformAllocator: alloc size %d exceeds ring capacity %u",
                size, capacity_);
       return 0;
     }
     cursor_ = alignUp(cursor_, alignment_);
     if (cursor_ + bytes > capacity_) {
-      fgfx_log("UniformAllocator: ring wrap (capacity %u)", capacity_);
+      render_log("UniformAllocator: ring wrap (capacity %u)", capacity_);
       cursor_ = 0;
     }
     uint32_t offset = cursor_;
@@ -56,6 +56,6 @@ class UniformAllocator {
   uint32_t capacity_ = 0;
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif  // FGFX_BACKEND_UNIFORM_ALLOCATOR_HPP

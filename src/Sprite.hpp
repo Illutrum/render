@@ -6,7 +6,7 @@
 #include <memory>
 #include <serialization/promise.hpp>
 
-namespace fgfx {
+namespace render {
 
   class Sprite : public std::enable_shared_from_this<Sprite> {
     friend class SpriteBuffer;

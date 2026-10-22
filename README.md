@@ -1,96 +1,52 @@
-# FastGFX
+# Render
 
-Graphics rendering library. **WebGL2** (native OpenGL 3.3 / wasm) and **WebGPU** (Dawn Vulkan native / wasm) share one `RenderBackend` and frame graph.
-
-Includes async file I/O (`fgfx::io`), sprite/MSDF batches, texture management, and a JavaScript runtime for web asset loading.
-
-## Platforms
-
-| Target | Status |
-|--------|--------|
-| Web (Emscripten + WebGL2) | Supported |
-| Web (Emscripten + WebGPU) | Supported |
-| Native Linux desktop (GLFW + GLEW / OpenGL) | Supported |
-| Native Linux desktop (GLFW + Dawn / Vulkan) | Supported |
-| Android / iOS / SDL | Not active (legacy code may remain) |
-
-## Quick start
-
-Build from the **repository root**:
-
-```bash
-cmake --build cmake-build-debug --target logo
-./cmake-build-debug/examples/logo
-```
-
-WebGPU native:
-
-```bash
-cmake --build cmake-build-webgpu --target example_visualization
-./cmake-build-webgpu/examples/example_visualization
-```
-
-Web example:
-
-```bash
-cmake --build cmake-build-emscripten --target msdf_example
-cd cmake-build-emscripten/examples/msdf_example
-python -m http.server 8080
-```
-
-## Examples
-
-| Example | Description |
-|---------|-------------|
-| `logo` | Rotating logo sprite |
-| `logo_blur` | Sprite + bitmap font (`cat`) |
-| `lines` | Animated line layer |
-| `msdf_example` | MSDF text rendering (`ui` font) |
-| `example_visualization` | ThorVG + sprites + MSDF debug text (GL and WebGPU) |
-| `example_game` | Reference game + loading UI |
-
-## File I/O
-
-Async binary loading lives in `fgfx::io` ([include/io/FileLoader.hpp](include/io/FileLoader.hpp)):
+The Illutrum frame graph. WebGL2 / OpenGL is the default backend. WebGPU is the other one. A picture needs one include.
 
 ```cpp
-#include <io/FileLoader.hpp>
-
-auto data = fgfx::io::loadFile("assets/logo.png");
-data->on_resolved([](std::string& bytes) { /* ... */ });
+#include <render.hpp>
 ```
 
-On native builds, `fgfx::init()` starts the I/O thread pool; `fgfx::destroy()` shuts it down.
+Repository: [Illutrum/render](https://github.com/Illutrum/render).
 
-## Documentation
+## What it draws
 
-- [Architecture](docs/architecture.md) — backends, frame graph, uniforms, features
-- [Text layout](docs/text.md) — `measureInk` vs `measureString`; center glyphs by ink, not baseline
-- [WebGPU TODO](../web-gpu-todo.md) — phase checklist (as-built vs deferred)
-- [game-dev overview](../README.md) — build presets (GL / WebGPU / wasm)
+`render::init` opens the window and starts file loading. `render::engine` owns the backend. A scene records passes on a `render::FrameBuilder`. Batches (sprites, MSDF and bitmap text, lines, polygons) implement `record`. Paint reads the frame graph. This library does not lay out a page and it does not rasterize SVG.
 
-## Tests (doctest)
+`FGFX_BACKEND` selects the backend: `GL` (default) or `WebGPU`.
 
-Headless tests cover file I/O, PNG decode, shader preprocessing, and BMFont XML parsing.
+## Build
 
-**Native — run binary:**
 ```bash
-cmake --build cmake-build-debug --target test_fgfx
-./cmake-build-debug/examples/test_fgfx
+git submodule update --init
+cmake -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 
-**Native — CTest:**
+WebGPU:
+
 ```bash
-cd cmake-build-debug/game-dev/fgfx
-ctest -R FGFXTests --output-on-failure
+cmake -B build-webgpu -DFGFX_BACKEND=WebGPU
+cmake --build build-webgpu
 ```
 
-Filter a single test case:
+The wasm loader is `js/`. It is not an npm package.
+
 ```bash
-./cmake-build-debug/examples/test_fgfx -tc="io load existing file"
+cd js && npm ci && npm run build
 ```
 
-## Related projects
+That writes `runtime-js-compiled.js`. The host links the wasm module. This repository does not.
 
-- [asset-manager](../asset-manager/README.md) — ref-counted asset loading on top of FGFX
-- [game-dev overview](../README.md)
+## Use
+
+```cmake
+add_subdirectory(render)
+target_link_libraries(your_target PRIVATE render)
+```
+
+Public headers are `render.hpp`, `io/FileLoader.hpp`, and `BmFontParse.hpp`. The namespace is `render`.
+
+## License
+
+MIT. Copyright (c) 2026 Magowie Sp. z o.o. GLM, the WebGPU distribution, and the DejaVu atlas are named in `NOTICE`.

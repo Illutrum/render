@@ -1,17 +1,17 @@
-#include <fastgfx.hpp>
+#include <render.hpp>
 #include <cmath>
 #include <memory>
 
 int main() {
-  fgfx::init();
+  render::init();
 
-  auto glyphBatch = std::make_shared<fgfx::GlyphBatch>(fgfx::engine.get());
-  auto font = fgfx::engine->getMSDFFont("assets/ui");
+  auto glyphBatch = std::make_shared<render::GlyphBatch>(render::engine.get());
+  auto font = render::engine->getMSDFFont("assets/ui");
 
-  fgfx::engine->setSceneRenderFunction([glyphBatch, font](fgfx::FrameBuilder& builder, double time, float delta) {
+  render::engine->setSceneRenderFunction([glyphBatch, font](render::FrameBuilder& builder, double time, float delta) {
     (void)delta;
-    float aspectRatio = 1.0f * fgfx::engine->width / fgfx::engine->height;
-    fgfx::ModelViewProjection mvp = {
+    float aspectRatio = 1.0f * render::engine->width / render::engine->height;
+    render::ModelViewProjection mvp = {
       .projectionMatrix = glm::perspective(35.0f, aspectRatio, 0.1f, 1000.0f),
       .viewMatrix = glm::lookAt(glm::vec3(0, 0, 20), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0)),
       .modelMatrix = glm::mat4(1.0),
@@ -20,13 +20,13 @@ int main() {
     mvp.multiply();
     builder.context().mvp = mvp;
 
-    fgfx::ClearValue clear;
+    render::ClearValue clear;
     clear.r = 0.12f;
     clear.g = 0.14f;
     clear.b = 0.18f;
     clear.a = 1.0f;
-    fgfx::RenderPass& pass = builder.beginPass("scene", builder.surfaceColor(),
-                                               fgfx::LoadOp::Clear, clear);
+    render::RenderPass& pass = builder.beginPass("scene", builder.surfaceColor(),
+                                               render::LoadOp::Clear, clear);
 
     glyphBatch->reset();
 
@@ -60,8 +60,8 @@ int main() {
 
 #ifndef EMSCRIPTEN
 #ifndef __ANDROID
-  fgfx::engine->mainLoop();
-  fgfx_log("Out of main loop! exiting");
+  render::engine->mainLoop();
+  render_log("Out of main loop! exiting");
 #endif
 #endif
 }

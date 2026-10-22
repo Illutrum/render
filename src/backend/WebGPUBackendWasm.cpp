@@ -10,18 +10,18 @@
 
 extern "C" WGPUDevice emscripten_webgpu_get_device(void);
 
-namespace fgfx {
+namespace render {
 
 void WebGPUBackend::initWasm(const char* canvasSelector, int width, int height) {
   wgpu::Instance instance = wgpu::createInstance();
   if (!instance) {
-    fgfx_log("WebGPU: could not create instance\n");
+    render_log("WebGPU: could not create instance\n");
     return;
   }
 
   WGPUDevice rawDevice = emscripten_webgpu_get_device();
   if (!rawDevice) {
-    fgfx_log("WebGPU: emscripten_webgpu_get_device returned null "
+    render_log("WebGPU: emscripten_webgpu_get_device returned null "
              "(Module.preinitializedWebGPUDevice missing?)\n");
     return;
   }
@@ -38,15 +38,15 @@ void WebGPUBackend::initWasm(const char* canvasSelector, int width, int height) 
 
   wgpu::Surface surface = instance.createSurface(surfaceDesc);
   if (!surface) {
-    fgfx_log("WebGPU: could not create canvas surface (%s)\n", selector);
+    render_log("WebGPU: could not create canvas surface (%s)\n", selector);
     return;
   }
 
   if (width <= 0) width = 1280;
   if (height <= 0) height = 1024;
   initWithDevice(instance, device, surface, width, height, {});
-  fgfx_log("WebGPU: initialized wasm/browser backend (%dx%d, %s)\n",
+  render_log("WebGPU: initialized wasm/browser backend (%dx%d, %s)\n",
            width, height, selector);
 }
 
-}  // namespace fgfx
+}  // namespace render

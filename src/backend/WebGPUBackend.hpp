@@ -30,7 +30,7 @@
 
 struct GLFWwindow;
 
-namespace fgfx {
+namespace render {
 
 class WebGPUBackend : public RenderBackend {
  public:
@@ -189,6 +189,6 @@ class WebGPUBackend : public RenderBackend {
   WGPUTextureFormat textureFormatOf(PixelFormat f);
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif  // FGFX_BACKEND_WEBGPU_BACKEND_HPP

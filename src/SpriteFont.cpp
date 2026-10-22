@@ -11,7 +11,7 @@
 
 #include "config.hpp"
 
-namespace fgfx {
+namespace render {
 
   SpriteFont::SpriteFont(std::string namep) : name(namep) {
     scale = glm::vec2(1,1);

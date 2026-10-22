@@ -1,4 +1,4 @@
-#include <fastgfx.hpp>
+#include <render.hpp>
 #include <vector>
 #include <cstdlib>
 #include <memory>
@@ -9,7 +9,7 @@ std::vector<std::pair<glm::vec2, glm::vec2>> points;
 #define POINTS_SPEED 2.3f
 
 int main() {
-  fgfx::init();
+  render::init();
 
   points.resize(POINTS_COUNT);
   for (int i = 0; i < POINTS_COUNT; i++) {
@@ -19,14 +19,14 @@ int main() {
     points[i].second.y = 1.0 * (rand() % 2000) / 1000 - 1;
   }
 
-  auto logoSprite = fgfx::engine->getSprite("assets/logo.png");
-  auto spriteBatch = std::make_shared<fgfx::SpriteBatch>(fgfx::engine.get());
-  auto lineBatch = std::make_shared<fgfx::LineBatch>(fgfx::engine.get());
+  auto logoSprite = render::engine->getSprite("assets/logo.png");
+  auto spriteBatch = std::make_shared<render::SpriteBatch>(render::engine.get());
+  auto lineBatch = std::make_shared<render::LineBatch>(render::engine.get());
 
-  fgfx::engine->setSceneRenderFunction([=](fgfx::FrameBuilder& builder, double time, float delta) {
+  render::engine->setSceneRenderFunction([=](render::FrameBuilder& builder, double time, float delta) {
     (void)time;
-    float aspectRatio = 1.0 * fgfx::engine->width / fgfx::engine->height;
-    fgfx::ModelViewProjection mvp = {
+    float aspectRatio = 1.0 * render::engine->width / render::engine->height;
+    render::ModelViewProjection mvp = {
       .projectionMatrix = glm::perspective(35.0f, aspectRatio, 0.1f, 1000.0f),
       .viewMatrix = glm::lookAt(glm::vec3(0, 0, 20), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0)),
       .modelMatrix = glm::mat4(1.0),
@@ -35,13 +35,13 @@ int main() {
     mvp.multiply();
     builder.context().mvp = mvp;
 
-    fgfx::ClearValue clear;
+    render::ClearValue clear;
     clear.r = 0.9f;
     clear.g = 0.9f;
     clear.b = 0.95f;
     clear.a = 1.0f;
-    fgfx::RenderPass& pass = builder.beginPass("scene", builder.surfaceColor(),
-                                               fgfx::LoadOp::Clear, clear);
+    render::RenderPass& pass = builder.beginPass("scene", builder.surfaceColor(),
+                                               render::LoadOp::Clear, clear);
 
     spriteBatch->reset();
     lineBatch->reset();
@@ -86,8 +86,8 @@ int main() {
 
 #ifndef EMSCRIPTEN
 #ifndef __ANDROID
-  fgfx::engine->mainLoop();
-  fgfx_log("Out of main loop! exiting");
+  render::engine->mainLoop();
+  render_log("Out of main loop! exiting");
 #endif
 #endif
 }

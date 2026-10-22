@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 class WebGLBackend : public RenderBackend {
  public:
@@ -103,6 +103,6 @@ class WebGLBackend : public RenderBackend {
   void ensureUniformRing();
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif  // FGFX_BACKEND_WEBGL_BACKEND_HPP

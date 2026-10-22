@@ -159,3 +159,6 @@ runtime-js-compiled.js.map
 .idea
 examples/*.asm.js
 examples/*.asm.js.mem
+
+build/
+compile_commands.json

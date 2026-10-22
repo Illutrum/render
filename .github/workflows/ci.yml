@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          repository: daemonarium/reflection-toolchain
+          ref: v0.1.0
+          path: reflection-toolchain
+      - name: packages
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++ git libpng-dev libglew-dev libglfw3-dev
+      - name: sysroot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download v0.1.0 \
+            --repo daemonarium/reflection-toolchain \
+            --pattern sysroot.tar.gz \
+            --dir "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/sysroot"
+          tar -xzf "$RUNNER_TEMP/sysroot.tar.gz" -C "$RUNNER_TEMP/sysroot"
+          if [ -x "$RUNNER_TEMP/sysroot/usr/local/bin/clang++" ]; then
+            echo "P2996_COMPILER_SYSROOT=$RUNNER_TEMP/sysroot" >> "$GITHUB_ENV"
+          elif [ -x "$RUNNER_TEMP/sysroot/sysroot/usr/local/bin/clang++" ]; then
+            echo "P2996_COMPILER_SYSROOT=$RUNNER_TEMP/sysroot/sysroot" >> "$GITHUB_ENV"
+          else
+            echo "sysroot.tar.gz did not contain usr/local/bin/clang++" >&2
+            exit 1
+          fi
+      - name: configure, build, test
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/reflection-toolchain/toolchain/p2996-toolchain.cmake"
+          cmake --build build
+          ctest --test-dir build --output-on-failure

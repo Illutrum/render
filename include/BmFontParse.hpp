@@ -4,7 +4,7 @@
 #include <string>
 #include <cstdlib>
 
-namespace fgfx {
+namespace render {
 
   inline float parseXmlAttr(const std::string& tag, const char* name) {
     std::string key = std::string(name) + "=\"";

@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 // FrameGraph runs after the scene has recorded every pass. Reusing one GPU
 // vertex buffer across record() calls would leave earlier DrawCalls pointing
@@ -62,6 +62,6 @@ struct GpuUploadEpoch {
   }
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif

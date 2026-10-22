@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 class Engine;
 struct FrameContext;
@@ -40,6 +40,6 @@ class PolygonBatch {
   void ensurePipeline();
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif

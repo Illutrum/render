@@ -10,7 +10,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace fgfx {
+namespace render {
 
 inline void accumulateInk(TextInk& ink, float x, const SpriteCharacter& ch) {
   if (ch.size.x <= 0.0f || ch.size.y <= 0.0f) {
@@ -92,6 +92,6 @@ inline float fitInkScale(const TextInk& ink, float boxW, float boxH, float fill 
   return sx < sy ? sx : sy;
 }
 
-} // namespace fgfx
+} // namespace render
 
 #endif

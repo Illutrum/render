@@ -12,7 +12,7 @@
 #include <string>
 #include <serialization/promise.hpp>
 
-namespace fgfx {
+namespace render {
 
   class SpriteBatch;
 

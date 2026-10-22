@@ -2,12 +2,12 @@
 // Created by Michał Łaszczewski on 09/07/16.
 //
 
-#include <fastgfx.hpp>
+#include <render.hpp>
 
 #include <vector>
 #include <memory>
 #include <cstdint>
-#include <fastgfx.hpp>
+#include <render.hpp>
 #include "config.hpp"
 #include <io/FileLoader.hpp>
 #include "backend/RenderBackend.hpp"
@@ -22,11 +22,11 @@
 
 #ifdef __USE_GLFW
 void glfwErrorCallback(int error, const char* description) {
-  fgfx_log("GLFW error %d : %s", error, description)
+  render_log("GLFW error %d : %s", error, description)
 }
 #endif
 
-namespace fgfx {
+namespace render {
 
 #ifdef __ANDROID
   AAssetManager* assetManager;
@@ -59,25 +59,25 @@ namespace fgfx {
     }
     shutdownHooks.clear();
 #ifdef __USE_GLFW
-    //glfwDestroyWindow(fgfx::glfwWindow);
+    //glfwDestroyWindow(render::glfwWindow);
     glfwTerminate();
 #endif
 #ifndef EMSCRIPTEN
     finished = true;
     if(loaderThread.joinable()) loaderThread.join();
-    fgfx::io::destroy();
+    render::io::destroy();
 #endif
   }
 
   void init() {
 #ifndef EMSCRIPTEN
     finished = false;
-    fgfx::io::init();
+    render::io::init();
 #endif
 #ifdef EMSCRIPTEN
     EM_ASM(Module.initializeFastGfxRuntime());
-    fgfx_log("ENGINE INITIALIZATION\n");
-    fgfx::engine = std::make_shared<fgfx::Engine>();
+    render_log("ENGINE INITIALIZATION\n");
+    render::engine = std::make_shared<render::Engine>();
 #ifdef FGFX_BACKEND_WEBGPU
     if (auto* wgpuBackend = dynamic_cast<WebGPUBackend*>(engine->getBackend())) {
       wgpuBackend->initWasm("#fgfx_canvas", 1280, 1024);
@@ -88,7 +88,7 @@ namespace fgfx {
 #ifdef __USE_GLFW
     glfwSetErrorCallback(glfwErrorCallback);
     if (!glfwInit()) {
-      fgfx_log("could not init glfw")
+      render_log("could not init glfw")
       throw InitializationFailed();
     }
     glfwWindowHint(GLFW_ALPHA_BITS, 8);
@@ -100,7 +100,7 @@ namespace fgfx {
 
     glfwWindow = glfwCreateWindow(1280, 1024, "FGFX", NULL, NULL);
     if (!glfwWindow) {
-      fgfx_log("could not create window")
+      render_log("could not create window")
       throw InitializationFailed();
     }
 
@@ -110,13 +110,13 @@ namespace fgfx {
 #ifdef __linux__
     GLenum err = glewInit();
     if (err != GLEW_OK) {
-      fgfx_log("could not init glew %d : %s", err, glewGetErrorString(err));
+      render_log("could not init glew %d : %s", err, glewGetErrorString(err));
       throw InitializationFailed();
     }
 #endif
 #endif
 
-    fgfx::engine = std::make_shared<fgfx::Engine>();
+    render::engine = std::make_shared<render::Engine>();
 
 #ifdef FGFX_BACKEND_WEBGPU
     // Initialize the WebGPU backend with Dawn + the GLFW window.
@@ -127,7 +127,7 @@ namespace fgfx {
 #endif
 #endif
 #ifdef __ANDROID
-    fgfx::engine = std::make_shared<fgfx::Engine>();
+    render::engine = std::make_shared<render::Engine>();
 #endif
 #ifndef EMSCRIPTEN
     //loaderThread = std::thread(imageLoader);
@@ -152,7 +152,7 @@ namespace fgfx {
   void checkGLError() {
     GLenum errCode;
     if ((errCode = glGetError()) != GL_NO_ERROR) {
-      fgfx_log("GL Error: %d %s", errCode, glErrorString(errCode));
+      render_log("GL Error: %d %s", errCode, glErrorString(errCode));
       throw std::exception();
     }
   }
@@ -160,49 +160,49 @@ namespace fgfx {
 }
 
 #ifdef EMSCRIPTEN
-using namespace fgfx;
+using namespace render;
 
 extern "C" {
 
 FGFX_API
 void fgfx_render(double time, float delta, int widthp, int heightp, double rw, double rh) {
-  fgfx::engine->realWidth = rw;
-  fgfx::engine->realHeight = rh;
-  fgfx::engine->render(time, delta, widthp, heightp);
+  render::engine->realWidth = rw;
+  render::engine->realHeight = rh;
+  render::engine->render(time, delta, widthp, heightp);
 }
 
 FGFX_API
 int fgfx_getSpritesToLoadCount() {
-  return fgfx::engine->getSpritesToLoadCount();
+  return render::engine->getSpritesToLoadCount();
 }
 
 FGFX_API
-fgfx::Sprite* fgfx_getSpriteToLoad(int id) {
-  return fgfx::engine->getSpriteToLoad(id).get();
+render::Sprite* fgfx_getSpriteToLoad(int id) {
+  return render::engine->getSpriteToLoad(id).get();
 }
 
 FGFX_API
 void fgfx_clearSpritesToLoad(int id) {
-  fgfx::engine->clearSpritesToLoad();
+  render::engine->clearSpritesToLoad();
 }
 
 FGFX_API
-fgfx::Sprite* fgfx_getSprite(const char* spriteName) {
-  return fgfx::engine->getSprite(spriteName).get();
+render::Sprite* fgfx_getSprite(const char* spriteName) {
+  return render::engine->getSprite(spriteName).get();
 }
 
 FGFX_API
-fgfx::Sprite* fgfx_getEmptySprite(const char* spriteName) {
-  return fgfx::engine->getEmptySprite(spriteName).get();
+render::Sprite* fgfx_getEmptySprite(const char* spriteName) {
+  return render::engine->getEmptySprite(spriteName).get();
 }
 
 FGFX_API
-const char* fgfx_Sprite_getName(fgfx::Sprite* sprite) {
+const char* fgfx_Sprite_getName(render::Sprite* sprite) {
   return sprite->name.c_str();
 }
 
 FGFX_API
-void fgfx_Sprite_setTextureFragment(fgfx::Sprite* sprite, int textureIdp, float left, float top, float right, float bottom,
+void fgfx_Sprite_setTextureFragment(render::Sprite* sprite, int textureIdp, float left, float top, float right, float bottom,
                                     int widthp, int heightp, bool preloaded) {
   sprite->setTextureFragment(textureIdp, left, top, right, bottom, widthp, heightp, preloaded);
   if (sprite->loadPromise) {
@@ -212,134 +212,134 @@ void fgfx_Sprite_setTextureFragment(fgfx::Sprite* sprite, int textureIdp, float 
 
 FGFX_API
 int fgfx_getSpriteFontsToLoadCount() {
-  return fgfx::engine->getSpriteFontsToLoadCount();
+  return render::engine->getSpriteFontsToLoadCount();
 }
 
 FGFX_API
-fgfx::SpriteFont* fgfx_getSpriteFontToLoad(int id) {
-  return fgfx::engine->getSpriteFontToLoad(id).get();
+render::SpriteFont* fgfx_getSpriteFontToLoad(int id) {
+  return render::engine->getSpriteFontToLoad(id).get();
 }
 
 FGFX_API
 void fgfx_clearSpriteFontsToLoad(int id) {
-  fgfx::engine->clearSpriteFontsToLoad();
+  render::engine->clearSpriteFontsToLoad();
 }
 
 FGFX_API
-const char* fgfx_SpriteFont_getName(fgfx::SpriteFont* font) {
+const char* fgfx_SpriteFont_getName(render::SpriteFont* font) {
   return font->name.c_str();
 }
 
 FGFX_API
-void fgfx_SpriteFont_setHeight(fgfx::SpriteFont* font, float linep, float basep) {
+void fgfx_SpriteFont_setHeight(render::SpriteFont* font, float linep, float basep) {
   font -> setHeight(linep, basep);
   font->loadPromise->resolve(font->shared_from_this());
 }
 
 FGFX_API
-void fgfx_SpriteFont_setCharacter(fgfx::SpriteFont* font, unsigned short character, fgfx::Sprite* sprite,
+void fgfx_SpriteFont_setCharacter(render::SpriteFont* font, unsigned short character, render::Sprite* sprite,
                             float xSize, float ySize, float xOffset, float yOffset, float advance) {
   font -> setCharacter(character,sprite->shared_from_this(),glm::vec2(xSize,ySize),glm::vec2(xOffset,yOffset),advance);
 }
 
 FGFX_API
 int fgfx_getMSDFFontsToLoadCount() {
-  return fgfx::engine->getMSDFFontsToLoadCount();
+  return render::engine->getMSDFFontsToLoadCount();
 }
 
 FGFX_API
-fgfx::MSDFFont* fgfx_getMSDFFontToLoad(int id) {
-  return fgfx::engine->getMSDFFontToLoad(id).get();
+render::MSDFFont* fgfx_getMSDFFontToLoad(int id) {
+  return render::engine->getMSDFFontToLoad(id).get();
 }
 
 FGFX_API
 void fgfx_clearMSDFFontsToLoad(int id) {
-  fgfx::engine->clearMSDFFontsToLoad();
+  render::engine->clearMSDFFontsToLoad();
 }
 
 FGFX_API
-const char* fgfx_MSDFFont_getName(fgfx::MSDFFont* font) {
+const char* fgfx_MSDFFont_getName(render::MSDFFont* font) {
   return font->name.c_str();
 }
 
 FGFX_API
-void fgfx_MSDFFont_setHeight(fgfx::MSDFFont* font, float linep, float basep) {
+void fgfx_MSDFFont_setHeight(render::MSDFFont* font, float linep, float basep) {
   font->setHeight(linep, basep);
 }
 
 FGFX_API
-void fgfx_MSDFFont_setPxRange(fgfx::MSDFFont* font, float range) {
+void fgfx_MSDFFont_setPxRange(render::MSDFFont* font, float range) {
   font->setPxRange(range);
 }
 
 FGFX_API
-void fgfx_MSDFFont_setScale(fgfx::MSDFFont* font, float scaleW, float scaleH) {
+void fgfx_MSDFFont_setScale(render::MSDFFont* font, float scaleW, float scaleH) {
   font->setScale(scaleW, scaleH);
 }
 
 FGFX_API
-void fgfx_MSDFFont_setCharacter(fgfx::MSDFFont* font, unsigned short character, fgfx::Sprite* sprite,
+void fgfx_MSDFFont_setCharacter(render::MSDFFont* font, unsigned short character, render::Sprite* sprite,
                                 float xSize, float ySize, float xOffset, float yOffset, float advance) {
   font->setCharacter(character, sprite->shared_from_this(), glm::vec2(xSize, ySize), glm::vec2(xOffset, yOffset), advance);
 }
 
 FGFX_API
-void fgfx_MSDFFont_finishLoad(fgfx::MSDFFont* font) {
+void fgfx_MSDFFont_finishLoad(render::MSDFFont* font) {
   font->loadPromise->resolve(font->shared_from_this());
 }
 
 
 FGFX_API
 int fgfx_getTexturesToLoadCount() {
-  return fgfx::engine->getTexturesToLoadCount();
+  return render::engine->getTexturesToLoadCount();
 }
 
 FGFX_API
-fgfx::Texture* fgfx_getTextureToLoad(int id) {
-  return fgfx::engine->getTextureToLoad(id).get();
+render::Texture* fgfx_getTextureToLoad(int id) {
+  return render::engine->getTextureToLoad(id).get();
 }
 
 FGFX_API
 void fgfx_clearTexturesToLoad(int id) {
-  fgfx::engine->clearTexturesToLoad();
+  render::engine->clearTexturesToLoad();
 }
 
 FGFX_API
-fgfx::Texture* fgfx_getTexture(const char* textureName) {
-  return fgfx::engine->getTexture(textureName).get();
+render::Texture* fgfx_getTexture(const char* textureName) {
+  return render::engine->getTexture(textureName).get();
 }
 
 FGFX_API
-const char* fgfx_Texture_getName(fgfx::Texture* texture) {
+const char* fgfx_Texture_getName(render::Texture* texture) {
   return texture->name.c_str();
 }
 
 FGFX_API
-void fgfx_Texture_setTexture(fgfx::Texture* texture, int textureId) {
+void fgfx_Texture_setTexture(render::Texture* texture, int textureId) {
   texture->texture = textureId;
   texture->initialized = true;
   texture->loadPromise->resolve(texture->shared_from_this());
 }
 
 FGFX_API
-int fgfx_Texture_getTexture(fgfx::Texture* texture) {
+int fgfx_Texture_getTexture(render::Texture* texture) {
   if(!texture->initialized) return -1;
   return texture->texture;
 }
 
 FGFX_API
 int fgfx_createTextureRGBA(int width, int height, const uint8_t* data) {
-  if (!fgfx::engine || !fgfx::engine->getBackend() || !data || width <= 0 ||
+  if (!render::engine || !render::engine->getBackend() || !data || width <= 0 ||
       height <= 0) {
     return 0;
   }
-  fgfx::TextureDesc desc;
+  render::TextureDesc desc;
   desc.width = width;
   desc.height = height;
-  desc.format = fgfx::PixelFormat::RGBA8Unorm;
+  desc.format = render::PixelFormat::RGBA8Unorm;
   desc.generateMipmaps = false;
-  fgfx::TextureHandle handle = fgfx::engine->getBackend()->createTexture(desc);
-  fgfx::engine->getBackend()->updateTexture(handle, width, height, data);
+  render::TextureHandle handle = render::engine->getBackend()->createTexture(desc);
+  render::engine->getBackend()->updateTexture(handle, width, height, data);
   return static_cast<int>(handle);
 }
 

@@ -9,7 +9,7 @@
 #include "backend/BackendTypes.hpp"
 #include <serialization/promise.hpp>
 
-namespace fgfx {
+namespace render {
 
   class Texture : public std::enable_shared_from_this<Texture> {
   public:

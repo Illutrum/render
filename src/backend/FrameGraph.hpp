@@ -19,7 +19,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 struct ModelViewProjection {
   glm::mat4 multipliedMatrix;
@@ -100,7 +100,7 @@ inline void logUnsupportedPass(const std::string& name, FeatureSet set,
   std::ostringstream msg;
   msg << "FrameGraph: skip pass \"" << name << "\" (missing "
       << missingFeatureNames(backend, set) << ")";
-  fgfx_log("%s", msg.str().c_str());
+  render_log("%s", msg.str().c_str());
 }
 
 // FrameGraph: the recorded passes, executed immediately against a backend.
@@ -223,6 +223,6 @@ class FrameBuilder {
   ClearValue surfaceClear_{0.31f, 0.52f, 0.16f, 1.0f};
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif  // FGFX_BACKEND_FRAME_GRAPH_HPP

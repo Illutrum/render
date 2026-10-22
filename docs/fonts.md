@@ -1,19 +1,19 @@
 # Fonts and text assets
 
-FastGFX supports two font workflows: **MSDF** (signed-distance-field, scalable) and **bitmap sprite fonts** (BMFont + PNG atlas).
+Two font workflows: **MSDF** (signed-distance-field, scalable) and **bitmap sprite fonts** (BMFont + PNG atlas).
 
 Both use ASCII `.fnt` descriptors (BMFont text format). XML `.fnt` is accepted as a fallback parser path.
 
 ## MSDF fonts (MSDFLayer)
 
-Used by `msdf_example` and asset-manager loading screens (`assets/ui`).
+Used by `msdf_example`. The atlas in the tree is `examples/assets/ui`.
 
 ### Generate with msdf-bmfont-xml
 
 Tool: [tools/generate-msdf-font.mjs](../tools/generate-msdf-font.mjs)
 
 ```bash
-cd game-dev/fgfx/tools
+cd tools
 npm install msdf-bmfont-xml
 node generate-msdf-font.mjs /usr/share/fonts/TTF/DejaVuSans.ttf ../examples/assets/ui
 ```
@@ -33,8 +33,8 @@ Important settings in the script:
 ### Loading in code
 
 ```cpp
-auto font = fgfx::engine->getMSDFFont("assets/ui");
-auto layer = fgfx::engine->createMSDFLayer();
+auto font = render::engine->getMSDFFont("assets/ui");
+auto layer = render::engine->createMSDFLayer();
 layer->drawText(font, "Hello", glm::vec2(0, 0), 1.0f, glm::vec4(1));
 ```
 
@@ -61,12 +61,12 @@ Output:
 ### Loading in code
 
 ```cpp
-auto font = fgfx::engine->getSpriteFont("assets/cat");
+auto font = render::engine->getSpriteFont("assets/cat");
 ```
 
 ## General assets (PNG)
 
-Native: `fgfx::loadPng(path)` reads via `fgfx::io::loadFile` and decodes with libpng.
+Native: `render::loadPng(path)` reads via `render::io::loadFile` and decodes with libpng.
 
 Web: images load through `fgfxLoader.loadSpriteImage` / `loadTextureImage` in the JS TextureManager.
 

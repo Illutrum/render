@@ -12,7 +12,7 @@
 #include <vector>
 #include <memory>
 
-namespace fgfx {
+namespace render {
 
   class TextureManager {
   public:

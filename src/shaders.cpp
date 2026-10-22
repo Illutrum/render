@@ -8,7 +8,7 @@
 #include <string>
 #include <sstream>
 
-namespace fgfx {
+namespace render {
 
   ShaderException::ShaderException(std::string errorp, GLuint shaderTypep) {
     error = errorp;
@@ -16,7 +16,7 @@ namespace fgfx {
     std::ostringstream str;
     str << "SHADER ERROR:\n" << error << "\n";
     message = str.str();
-    //fgfx_log("%s", message.c_str());
+    //render_log("%s", message.c_str());
   }
 
   std::string& replaceAll(std::string& there, std::string what, std::string to) {
@@ -44,7 +44,7 @@ namespace fgfx {
     GLuint shader;
     GLint compiled;
 
-    //fgfx_log("Compiling shader: \n%s\n", shaderSrc.c_str());
+    //render_log("Compiling shader: \n%s\n", shaderSrc.c_str());
 
     // Create the shader object
     shader = glCreateShader(type);
@@ -74,7 +74,7 @@ namespace fgfx {
         char *infoLog = new char[infoLen];
 
         glGetShaderInfoLog(shader, infoLen, NULL, infoLog);
-        fgfx_log("Error compiling shader:\n%s\n", infoLog);
+        render_log("Error compiling shader:\n%s\n", infoLog);
 
         error = infoLog;
 
@@ -95,7 +95,7 @@ namespace fgfx {
     auto programObject = glCreateProgram();
 
     if ( programObject == 0 ) {
-      fgfx_log("Could not create program object!");
+      render_log("Could not create program object!");
       return GL_FALSE;
     }
 
@@ -125,13 +125,13 @@ namespace fgfx {
         char* infoLog = new char[infoLen];
 
         glGetProgramInfoLog ( programObject, infoLen, NULL, infoLog );
-        fgfx_log( "Error linking program:\n%s", infoLog );
+        render_log( "Error linking program:\n%s", infoLog );
 
         error = infoLog;
 
         delete[] infoLog;
       } else  {
-        fgfx_log("Linking failed without info!");
+        render_log("Linking failed without info!");
       }
 
       glDeleteProgram ( programObject );

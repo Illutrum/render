@@ -8,7 +8,7 @@
 #ifdef EMSCRIPTEN
 
   #include <emscripten.h>
-  #define fgfx_log(...) emscripten_log(EM_LOG_ERROR, __VA_ARGS__);
+  #define render_log(...) emscripten_log(EM_LOG_ERROR, __VA_ARGS__);
   #define FGFX_API EMSCRIPTEN_KEEPALIVE
 
 #endif
@@ -17,7 +17,7 @@
   #include <android/asset_manager.h>
   #include <android/asset_manager_jni.h>
   #include <android/log.h>
-  #define fgfx_log(...) __android_log_print(ANDROID_LOG_INFO, "FastGFX", __VA_ARGS__);
+  #define render_log(...) __android_log_print(ANDROID_LOG_INFO, "FastGFX", __VA_ARGS__);
   #define FGFX_API
 
 #endif
@@ -25,7 +25,7 @@
 #ifndef __ANDROID
 
   #include <stdio.h>
-  #define fgfx_log(...) { printf(__VA_ARGS__); printf("\n"); }
+  #define render_log(...) { printf(__VA_ARGS__); printf("\n"); }
   #define FGFX_API
 
 #endif
@@ -68,7 +68,7 @@
 #define _NOEXCEPT _GLIBCXX_USE_NOEXCEPT _GLIBCXX_TXN_SAFE_DYN
 #endif
 
-namespace fgfx {
+namespace render {
   void checkGLError();
   const char* glErrorString();
 }

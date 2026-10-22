@@ -15,7 +15,7 @@
 
 #include "../src/config.hpp"
 
-namespace fgfx {
+namespace render {
 
   class Engine;
   class Sprite;

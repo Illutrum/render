@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <glm/glm.hpp>
 
-namespace fgfx {
+namespace render {
 
 namespace {
 // Map PixelFormat to (component count, GL type).
@@ -74,7 +74,7 @@ WebGLBackend::~WebGLBackend() {
 
 PipelineHandle WebGLBackend::createPipeline(const PipelineDesc& desc) {
   if (!supportsAll(desc.requiredFeatures)) {
-    fgfx_log("createPipeline rejected: missing required features");
+    render_log("createPipeline rejected: missing required features");
     return kNullPipeline;
   }
   GLuint vs = loadShader(GL_VERTEX_SHADER, desc.vertexGLSL);
@@ -414,4 +414,4 @@ void WebGLBackend::endFrame() {
   // Present is handled by the caller (glfwSwapBuffers / emscripten GL context).
 }
 
-}  // namespace fgfx
+}  // namespace render

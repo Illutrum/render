@@ -1,6 +1,6 @@
-# FastGFX architecture (as-built)
+# Architecture
 
-This describes the renderer as it exists after the WebGPU migration (phases 1–11). The original wishlist lives in [web-gpu-plan.md](../../web-gpu-plan.md).
+One frame graph. WebGL2 / OpenGL is the default backend. WebGPU is the other one.
 
 ## Backends
 
@@ -58,9 +58,9 @@ GL: Compute and StorageTexture false, RasterizeToTexture true. WebGPU: all true.
 
 Sprite/glyph/polygon/line/textured/transition/normal-mapped/PBR batches implement `record(RenderPass&, FrameContext&)`. They are ordinary objects, not created by `Engine`. One uniform `alloc` per `record()`, then one `DrawCall` per texture (or one for untextured batches).
 
-## ThorVG
+## SVG
 
-`fgfx::thorvg::record(pass, texture, w, h, buildShapes)` marks the pass `External` + `require(RasterizeToTexture)`. `WgCanvas::target` / `GlCanvas::target` use `ColorSpace::ABGR8888S`. GL raster targets are `RGBA8Unorm`. WebGPU ThorVG blit pipelines are hardcoded to `BGRA8Unorm`, so the offscreen target is BGRA; sampling that format already returns RGB (no sprite swizzle). No ThorVG fork.
+This library does not rasterize SVG. A host can record an external pass for that. `PassKind::External` is the hook.
 
 ## Resize
 

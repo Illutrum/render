@@ -7,7 +7,7 @@
 #include "Image.hpp"
 #include "BmFontParse.hpp"
 #include "backend/RenderBackend.hpp"
-#include <fastgfx.hpp>
+#include <render.hpp>
 #include <algorithm>
 #include <functional>
 #include <cctype>
@@ -15,7 +15,7 @@
 #include <string>
 #include <sstream>
 
-namespace fgfx {
+namespace render {
 
   TextureManager::TextureManager() {
     maxSize = 512;
@@ -154,7 +154,7 @@ namespace fgfx {
 
   void TextureManager::loadSpriteFont(std::shared_ptr<SpriteFont> spriteFont, std::shared_ptr<Image> image, std::string& data) {
     if(spriteFont->name.size() == 0 ) throw ImageNotFoundError();
-    fgfx::engine->uploadQueue.enqueue([=]{
+    render::engine->uploadQueue.enqueue([=]{
       uploadSpriteFont(spriteFont, image, data);
     });
   }
@@ -246,14 +246,14 @@ namespace fgfx {
 
   void TextureManager::loadMSDFFont(std::shared_ptr<MSDFFont> msdfFont, std::shared_ptr<Image> image, std::string& data) {
     if (msdfFont->name.size() == 0) throw ImageNotFoundError();
-    fgfx::engine->uploadQueue.enqueue([=] {
+    render::engine->uploadQueue.enqueue([=] {
       uploadMSDFFont(msdfFont, image, data);
     });
   }
 
   void TextureManager::loadTexture(std::shared_ptr<Texture> texture, std::shared_ptr<Image> image) {
     if(texture->name.size() == 0 ) throw ImageNotFoundError();
-    fgfx::engine->uploadQueue.enqueue([=]{
+    render::engine->uploadQueue.enqueue([=]{
       TextureDesc desc;
       desc.width = image->width;
       desc.height = image->height;

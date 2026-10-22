@@ -1,20 +1,20 @@
-#include <fastgfx.hpp>
+#include <render.hpp>
 #include <memory>
 
 #define PI 3.141592
 
 int main() {
-  fgfx::init();
+  render::init();
 
-  auto logoSprite = fgfx::engine->getSprite("assets/logo.png");
-  auto spriteBatch = std::make_shared<fgfx::SpriteBatch>(fgfx::engine.get());
-  auto font = fgfx::engine->getSpriteFont("assets/cat");
+  auto logoSprite = render::engine->getSprite("assets/logo.png");
+  auto spriteBatch = std::make_shared<render::SpriteBatch>(render::engine.get());
+  auto font = render::engine->getSpriteFont("assets/cat");
 
-  fgfx::engine->setSceneRenderFunction([logoSprite, spriteBatch, font](fgfx::FrameBuilder& builder, double time, float delta) {
+  render::engine->setSceneRenderFunction([logoSprite, spriteBatch, font](render::FrameBuilder& builder, double time, float delta) {
     (void)delta;
-    float aspectRatio = 1.0 * fgfx::engine->width / fgfx::engine->height;
+    float aspectRatio = 1.0 * render::engine->width / render::engine->height;
 
-    fgfx::ModelViewProjection mvp = {
+    render::ModelViewProjection mvp = {
       .projectionMatrix = glm::perspective(35.0f, aspectRatio, 0.1f, 1000.0f),
       .viewMatrix = glm::lookAt(glm::vec3(0, 0, 20), glm::vec3(0, 0, 0), glm::vec3(0, -1, 0)),
       .modelMatrix = glm::mat4(1.0),
@@ -23,13 +23,13 @@ int main() {
     mvp.multiply();
     builder.context().mvp = mvp;
 
-    fgfx::ClearValue clear;
+    render::ClearValue clear;
     clear.r = 0.9f;
     clear.g = 0.9f;
     clear.b = 0.95f;
     clear.a = 1.0f;
-    fgfx::RenderPass& pass = builder.beginPass("scene", builder.surfaceColor(),
-                                               fgfx::LoadOp::Clear, clear);
+    render::RenderPass& pass = builder.beginPass("scene", builder.surfaceColor(),
+                                               render::LoadOp::Clear, clear);
 
     spriteBatch->reset();
 
@@ -53,8 +53,8 @@ int main() {
 
 #ifndef EMSCRIPTEN
 #ifndef __ANDROID
-  fgfx::engine->mainLoop();
-  fgfx_log("Out of main loop! exiting");
+  render::engine->mainLoop();
+  render_log("Out of main loop! exiting");
 #endif
 #endif
 }

@@ -15,7 +15,7 @@
 #include <sstream>
 #include <serialization/promise.hpp>
 
-namespace fgfx {
+namespace render {
 
   struct Color {
     unsigned char r;

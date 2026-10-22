@@ -5,7 +5,7 @@
 
 #include <cstring>
 
-namespace fgfx {
+namespace render {
 
 namespace {
 #ifdef __USE_OPENGL
@@ -233,4 +233,4 @@ void TexturedBatch::record(RenderPass& pass, FrameContext& ctx) {
   }
 }
 
-}  // namespace fgfx
+}  // namespace render

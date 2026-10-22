@@ -9,7 +9,7 @@
 #include <memory>
 #include <serialization/promise.hpp>
 
-namespace fgfx {
+namespace render {
 
   class GlyphBatch;
 

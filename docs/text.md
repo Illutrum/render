@@ -5,9 +5,9 @@
 `measureInk` returns the AABB of the actual glyph quads in the same font space as `renderString` (pen origin, +X right, +Y up). Use that for centering, fitting, and aligning ink to a cell.
 
 ```cpp
-fgfx::TextInk ink = font->measureInk("♒");
-float scale = fgfx::fitInkScale(ink, boxW, boxH, 0.7f);
-glm::mat4 mat = fgfx::textYDownMat(worldCenter, scale, ink, fgfx::TextAlignH::Center);
+render::TextInk ink = font->measureInk("♒");
+float scale = render::fitInkScale(ink, boxW, boxH, 0.7f);
+glm::mat4 mat = render::textYDownMat(worldCenter, scale, ink, render::TextAlignH::Center);
 font->renderString(batch, mat, color, "♒");
 ```
 

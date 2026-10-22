@@ -12,7 +12,7 @@
 #include "Sprite.hpp"
 #include "config.hpp"
 
-namespace fgfx {
+namespace render {
 
   class STNode : public std::enable_shared_from_this<STNode> {
   public:

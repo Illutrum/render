@@ -4,7 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "config.hpp"
 
-namespace fgfx {
+namespace render {
 
   namespace {
     template <typename Batch>

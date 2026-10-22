@@ -5,7 +5,7 @@
 
 #include <cstring>
 
-namespace fgfx {
+namespace render {
 
 namespace {
 #ifdef __USE_OPENGL
@@ -188,4 +188,4 @@ void PolygonBatch::record(RenderPass& pass, FrameContext& ctx) {
   pass.drawCalls.push_back(std::move(dc));
 }
 
-}  // namespace fgfx
+}  // namespace render

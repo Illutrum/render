@@ -7,7 +7,7 @@ TEST_CASE("stripGlesQualifiers removes precision and qualifiers") {
     "highp vec4 color;\n"
     "mediump float x;\n"
     "lowp int i;\n";
-  fgfx::stripGlesQualifiers(src);
+  render::stripGlesQualifiers(src);
   CHECK(src.find("precision") == std::string::npos);
   CHECK(src.find("highp") == std::string::npos);
   CHECK(src.find("mediump") == std::string::npos);

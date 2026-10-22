@@ -15,7 +15,7 @@
 #include <string_view>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 namespace {
 // WGSL shader for the sprite batch.
@@ -138,7 +138,7 @@ void WebGPUBackend::initWithDevice(wgpu::Instance instance,
         break;
       }
     }
-    fgfx_log("WebGPU: surface format=%d (%zu formats)\n",
+    render_log("WebGPU: surface format=%d (%zu formats)\n",
              static_cast<int>(surfaceFormat_),
              static_cast<size_t>(caps.formatCount));
   } else {
@@ -154,10 +154,10 @@ void WebGPUBackend::initWithDevice(wgpu::Instance instance,
     });
     surfaceFormat_ = isRgba ? WGPUTextureFormat_RGBA8Unorm
                             : WGPUTextureFormat_BGRA8Unorm;
-    fgfx_log("WebGPU: using preferred canvas format=%d\n",
+    render_log("WebGPU: using preferred canvas format=%d\n",
              static_cast<int>(surfaceFormat_));
 #else
-    fgfx_log("WebGPU: getCapabilities failed, using BGRA8Unorm\n");
+    render_log("WebGPU: getCapabilities failed, using BGRA8Unorm\n");
 #endif
   }
   caps.freeMembers();
@@ -201,7 +201,7 @@ void WebGPUBackend::reconfigureSurface(int width, int height) {
 
 PipelineHandle WebGPUBackend::createPipeline(const PipelineDesc& desc) {
   if (!supportsAll(desc.requiredFeatures)) {
-    fgfx_log("createPipeline rejected: missing required features");
+    render_log("createPipeline rejected: missing required features");
     return kNullPipeline;
   }
   PipelineInfo info;
@@ -477,7 +477,7 @@ void WebGPUBackend::beginFrame() {
 
   if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal &&
       surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal) {
-    fgfx_log("WebGPU: getCurrentTexture failed (status=%d), retrying configure\n",
+    render_log("WebGPU: getCurrentTexture failed (status=%d), retrying configure\n",
              static_cast<int>(surfaceTexture.status));
     reconfigureSurface(surfaceWidth_, surfaceHeight_);
     surfaceTexture = wgpu::Default;
@@ -486,7 +486,7 @@ void WebGPUBackend::beginFrame() {
 
   if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal &&
       surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal) {
-    fgfx_log("WebGPU: getCurrentTexture failed (status=%d), skipping frame\n",
+    render_log("WebGPU: getCurrentTexture failed (status=%d), skipping frame\n",
              static_cast<int>(surfaceTexture.status));
     commandEncoder_ = device_.createCommandEncoder();
     return;
@@ -646,7 +646,7 @@ void WebGPUBackend::draw(int vertexCount) {
   key.uniformOffset = pendingUniformOffset_;
   key.texture = textureKey;
   if (bindGroupCache_.size() > kMaxBindGroupCache) {
-    fgfx_log("WebGPU: bind group cache overflow, clearing");
+    render_log("WebGPU: bind group cache overflow, clearing");
     bindGroupCache_.clear();
   }
   wgpu::BindGroup bindGroup;
@@ -694,4 +694,4 @@ void WebGPUBackend::endFrame() {
   if (instance_) instance_.processEvents();
 }
 
-}  // namespace fgfx
+}  // namespace render

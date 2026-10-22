@@ -5,7 +5,7 @@
 
 #include <cstring>
 
-namespace fgfx {
+namespace render {
 
 namespace {
 #ifdef __USE_OPENGL
@@ -384,4 +384,4 @@ void NormalMappedSpriteBatch::record(RenderPass& pass, FrameContext& ctx) {
   }
 }
 
-}  // namespace fgfx
+}  // namespace render

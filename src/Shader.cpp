@@ -5,7 +5,7 @@
 #include "Shader.hpp"
 #include "shaders.hpp"
 
-namespace fgfx {
+namespace render {
 
   ShaderBinding* Shader::requestBinding(ShaderBindingRequest* request) {
     for(auto binding : bindings) {
@@ -46,12 +46,12 @@ namespace fgfx {
 
     checkGLError();
 
-    auto vertexShader = fgfx::loadShader ( GL_VERTEX_SHADER, vertexCode.c_str() );
-    auto fragmentShader = fgfx::loadShader ( GL_FRAGMENT_SHADER, fragmentCode.c_str() );
+    auto vertexShader = render::loadShader ( GL_VERTEX_SHADER, vertexCode.c_str() );
+    auto fragmentShader = render::loadShader ( GL_FRAGMENT_SHADER, fragmentCode.c_str() );
 
     checkGLError();
 
-    program = fgfx::createProgram (vertexShader, fragmentShader);
+    program = render::createProgram (vertexShader, fragmentShader);
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);

@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 class Engine;
 struct FrameContext;
@@ -59,6 +59,6 @@ class NormalMappedSpriteBatch {
                    glm::vec2 colorCoord, glm::vec2 normalCoord);
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif

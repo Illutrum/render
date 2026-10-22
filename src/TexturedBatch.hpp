@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 class Engine;
 struct FrameContext;
@@ -51,6 +51,6 @@ class TexturedBatch {
   void ensurePipeline();
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif

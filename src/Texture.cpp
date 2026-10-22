@@ -3,10 +3,10 @@
 //
 
 #include "Texture.hpp"
-#include <fastgfx.hpp>
+#include <render.hpp>
 #include "backend/RenderBackend.hpp"
 
-namespace fgfx {
+namespace render {
 
   Texture::Texture(std::string namep) : name(namep) {
     texture = -1;

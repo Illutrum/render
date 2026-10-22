@@ -6,9 +6,9 @@
 
 #include <vector>
 #include <algorithm>
-#include <fastgfx.hpp>
+#include <render.hpp>
 
-namespace fgfx {
+namespace render {
 
   STNode::STNode(int xp, int yp, int widthp, int heightp) : left(nullptr), right(nullptr), image(nullptr),
     x(xp), y(yp), width(widthp), height(heightp) {
@@ -89,8 +89,8 @@ namespace fgfx {
       image->put(info.image, info.x, info.y);
     }
 
-    fgfx_log("SPRITES TEXTURE REQUEST UPLOAD")
-    fgfx::engine->uploadQueue.enqueue([this]{
+    render_log("SPRITES TEXTURE REQUEST UPLOAD")
+    render::engine->uploadQueue.enqueue([this]{
       this->upload();
     });
 
@@ -111,7 +111,7 @@ namespace fgfx {
     for (int i = 0; i < packedSprites.size(); i++) {
       SpriteInfo& info = packedSprites[i];
       if (info.sprite && (!info.sprite->locked) && (!info.sprite->locked)
-          && fgfx::engine->renderTime - info.sprite->lastUseTime > 3000) { /// REMOVE SPRITE
+          && render::engine->renderTime - info.sprite->lastUseTime > 3000) { /// REMOVE SPRITE
         info.sprite->unload();
         packedSprites.erase(packedSprites.begin()+i);
         i--;
@@ -120,19 +120,19 @@ namespace fgfx {
   }
 
   void SpritesTexture::upload() { // in renderer thread
-    fgfx_log("SPRITES TEXTURE UPLOAD")
+    render_log("SPRITES TEXTURE UPLOAD")
     if (!textureCreated) {
-      fgfx::TextureDesc desc;
+      render::TextureDesc desc;
       desc.width = image->width;
       desc.height = image->height;
-      desc.format = fgfx::PixelFormat::RGBA8Unorm;
+      desc.format = render::PixelFormat::RGBA8Unorm;
       desc.generateMipmaps = true;
       texture = static_cast<GLuint>(
-          fgfx::engine->getBackend()->createTexture(desc));
+          render::engine->getBackend()->createTexture(desc));
       textureCreated = true;
     }
-    fgfx::engine->getBackend()->updateTexture(
-        static_cast<fgfx::TextureHandle>(texture),
+    render::engine->getBackend()->updateTexture(
+        static_cast<render::TextureHandle>(texture),
         image->width, image->height, image->data);
 
     for(SpriteInfo& info : packedSprites) {

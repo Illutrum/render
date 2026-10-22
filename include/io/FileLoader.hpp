@@ -17,7 +17,7 @@
 #include <android/asset_manager_jni.h>
 #endif
 
-namespace fgfx {
+namespace render {
 namespace io {
 
   class FileNotFoundError : public std::exception {

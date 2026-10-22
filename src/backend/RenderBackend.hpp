@@ -7,7 +7,7 @@
 
 #include "BackendTypes.hpp"
 
-namespace fgfx {
+namespace render {
 
 class RenderBackend {
  public:
@@ -70,6 +70,6 @@ class RenderBackend {
   virtual void endFrame() = 0;  // present
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif  // FGFX_BACKEND_RENDER_BACKEND_HPP

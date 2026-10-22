@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace fgfx {
+namespace render {
 
 class Engine;
 struct FrameContext;
@@ -68,6 +68,6 @@ class PBRSpriteBatch {
                    glm::vec2 materialCoord);
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif

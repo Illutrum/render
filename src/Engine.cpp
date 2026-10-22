@@ -1,6 +1,6 @@
 #include "Engine.hpp"
 #include "config.hpp"
-#include "fastgfx.hpp"
+#include "render.hpp"
 #include "backend/RenderBackend.hpp"
 #include "backend/WebGLBackend.hpp"
 #include "backend/FrameGraph.hpp"
@@ -11,7 +11,7 @@
 #include <chrono>
 #include <io/FileLoader.hpp>
 
-namespace fgfx {
+namespace render {
 
   std::shared_ptr<Engine> engine;
 
@@ -62,7 +62,7 @@ namespace fgfx {
     }
     std::shared_ptr<Sprite> sprite = std::make_shared<Sprite>(spriteName);
     sprite->loadPromise = std::make_shared<serialization::promise<std::shared_ptr<Sprite>>>();
-    fgfx_log("LOADING SPRITE!!! %s\n",spriteName.c_str());
+    render_log("LOADING SPRITE!!! %s\n",spriteName.c_str());
 #ifdef EMSCRIPTEN
     spritesToLoad.push_back(sprite);
 #else
@@ -107,7 +107,7 @@ namespace fgfx {
       if(texture->unloaded) reloadTexture(texture);
       return texture;
     }
-    fgfx_log("LOADING TEXTURE!!! %s\n",textureName.c_str());
+    render_log("LOADING TEXTURE!!! %s\n",textureName.c_str());
     std::shared_ptr<Texture> texture = std::make_shared<Texture>(textureName);
     texture->loadPromise = std::make_shared<serialization::promise<std::shared_ptr<Texture>>>();
 #ifdef EMSCRIPTEN
@@ -136,11 +136,11 @@ namespace fgfx {
     spriteFontsToLoad.push_back(spriteFont);
 #else
     auto pngp = loadPng(spriteFontName + ".png");
-    auto datap = fgfx::io::loadFile(spriteFontName + ".fnt");
+    auto datap = render::io::loadFile(spriteFontName + ".fnt");
     pngp->on_resolved([this, spriteFont, datap](std::shared_ptr<Image> image) {
       datap->on_resolved([this, spriteFont, image](std::string data){
         textureManager.loadSpriteFont(spriteFont, image, data);
-        fgfx::engine->uploadQueue.enqueue([=] {
+        render::engine->uploadQueue.enqueue([=] {
           spriteFont->loadPromise->resolve(spriteFont);
         });
       });
@@ -165,11 +165,11 @@ namespace fgfx {
     msdfFontsToLoad.push_back(msdfFont);
 #else
     auto pngp = loadPng(msdfFontName + ".png");
-    auto datap = fgfx::io::loadFile(msdfFontName + ".fnt");
+    auto datap = render::io::loadFile(msdfFontName + ".fnt");
     pngp->on_resolved([this, msdfFont, datap](std::shared_ptr<Image> image) {
       datap->on_resolved([this, msdfFont, image](std::string data) {
         textureManager.loadMSDFFont(msdfFont, image, data);
-        fgfx::engine->uploadQueue.enqueue([=] {
+        render::engine->uploadQueue.enqueue([=] {
           msdfFont->loadPromise->resolve(msdfFont);
         });
       });
@@ -235,7 +235,7 @@ namespace fgfx {
   void Engine::uploadTextures() {
 #ifndef EMSCRIPTEN
     Engine::UploadTask task;
-    while (fgfx::engine->uploadQueue.try_dequeue(task)) {
+    while (render::engine->uploadQueue.try_dequeue(task)) {
       task();
 #ifndef FGFX_BACKEND_WEBGPU
       checkGLError();

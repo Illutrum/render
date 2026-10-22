@@ -17,11 +17,11 @@ T waitPromise(std::shared_ptr<serialization::promise<T>> p) {
 }
 
 TEST_CASE("loadPng decodes logo.png") {
-  fgfx::io::init(1);
+  render::io::init(1);
   std::string path = std::string(FGFX_SOURCE_DIR) + "/examples/assets/logo.png";
-  auto image = waitPromise(fgfx::loadPng(path));
+  auto image = waitPromise(render::loadPng(path));
   CHECK(image != nullptr);
   CHECK(image->width > 0);
   CHECK(image->height > 0);
-  fgfx::io::destroy();
+  render::io::destroy();
 }

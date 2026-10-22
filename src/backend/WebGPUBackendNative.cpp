@@ -16,7 +16,7 @@
 
 #include <string>
 
-namespace fgfx {
+namespace render {
 namespace {
 
 std::string wgpuString(WGPUStringView sv) {
@@ -27,13 +27,13 @@ std::string wgpuString(WGPUStringView sv) {
 
 void onUncapturedError(const WGPUDevice*, WGPUErrorType type,
                        WGPUStringView message, void*, void*) {
-  fgfx_log("WebGPU uncaptured error (%d): %s\n",
+  render_log("WebGPU uncaptured error (%d): %s\n",
            static_cast<int>(type), wgpuString(message).c_str());
 }
 
 void onDeviceLost(const WGPUDevice*, WGPUDeviceLostReason reason,
                   WGPUStringView message, void*, void*) {
-  fgfx_log("WebGPU device lost (%d): %s\n",
+  render_log("WebGPU device lost (%d): %s\n",
            static_cast<int>(reason), wgpuString(message).c_str());
 }
 
@@ -42,7 +42,7 @@ void onDeviceLost(const WGPUDevice*, WGPUDeviceLostReason reason,
 void WebGPUBackend::initNative(GLFWwindow* window) {
   wgpu::Instance instance = wgpu::createInstance();
   if (!instance) {
-    fgfx_log("WebGPU: could not create instance\n");
+    render_log("WebGPU: could not create instance\n");
     return;
   }
 
@@ -60,7 +60,7 @@ void WebGPUBackend::initNative(GLFWwindow* window) {
 
   wgpu::Surface surface = instance.createSurface(surfaceDesc);
   if (!surface) {
-    fgfx_log("WebGPU: could not create surface\n");
+    render_log("WebGPU: could not create surface\n");
     return;
   }
 
@@ -72,7 +72,7 @@ void WebGPUBackend::initNative(GLFWwindow* window) {
 
   wgpu::Adapter adapter = instance.requestAdapter(adapterOpts);
   if (!adapter) {
-    fgfx_log("WebGPU: could not get Vulkan adapter\n");
+    render_log("WebGPU: could not get Vulkan adapter\n");
     return;
   }
 
@@ -83,7 +83,7 @@ void WebGPUBackend::initNative(GLFWwindow* window) {
 
   wgpu::Device device = adapter.requestDevice(deviceDesc);
   if (!device) {
-    fgfx_log("WebGPU: could not get device\n");
+    render_log("WebGPU: could not get device\n");
     return;
   }
 
@@ -98,8 +98,8 @@ void WebGPUBackend::initNative(GLFWwindow* window) {
   }
 
   initWithDevice(instance, device, surface, width, height, adapter);
-  fgfx_log("WebGPU: initialized Dawn/Vulkan backend (%dx%d)\n",
+  render_log("WebGPU: initialized Dawn/Vulkan backend (%dx%d)\n",
            width, height);
 }
 
-}  // namespace fgfx
+}  // namespace render

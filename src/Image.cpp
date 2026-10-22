@@ -5,13 +5,13 @@
 
 #ifndef EMSCRIPTEN ///TODO: implemented with javascript
 
-#include "fastgfx.hpp"
+#include "render.hpp"
 #include "Image.hpp"
 #include <algorithm>
 #include <io/FileLoader.hpp>
 #include <png.h>
 
-namespace fgfx {
+namespace render {
   extern bool finished;
 
   void ReadDataFromInputStream(png_structp png_ptr, png_bytep outBytes, png_size_t byteCountToRead) {
@@ -168,7 +168,7 @@ namespace fgfx {
   }
 
   std::shared_ptr<serialization::promise<std::shared_ptr<Image>>> loadPng(std::string path) {
-    return fgfx::io::loadFile(path)->then<std::shared_ptr<Image>>([](std::string data) -> std::shared_ptr<Image>{
+    return render::io::loadFile(path)->then<std::shared_ptr<Image>>([](std::string data) -> std::shared_ptr<Image>{
       return decodePngImage(data);
     });
   }

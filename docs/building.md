@@ -1,74 +1,34 @@
-# Building FastGFX
-
-Build from the **repository root**, not from `game-dev/fgfx/` directly.
-
-## Native (Linux desktop)
-
-Configure once (if not already done):
+# Building
 
 ```bash
-cmake -B cmake-build-debug -S .
+cmake -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 
-Build examples or tests:
+Stock C++20 is enough for this library. The tests fetch doctest. `glm` is a submodule. `daemonarium/rpc-cpp` `v0.1.0` is fetched for `serialization/promise.hpp`.
+
+Native dependencies: OpenGL, GLFW, GLEW, libpng, zlib.
+
+Examples (`logo`, `logo_blur`, `lines`, `msdf_example`) are built next to the test binary. They open a window. `ctest` does not run them.
+
+WebGPU, after `git submodule update --init`:
 
 ```bash
-cmake --build cmake-build-debug --target logo msdf_example test_fgfx
+cmake -B build-webgpu -DFGFX_BACKEND=WebGPU
+cmake --build build-webgpu
 ```
 
-Native binaries land in `cmake-build-debug/examples/`. Example assets are copied to `cmake-build-debug/examples/assets/` automatically (POST_BUILD).
+That links the Dawn backend from the `webgpu` submodule.
 
-Run:
+## JavaScript loader
+
+The browser host loads `runtime-js-compiled.js`. Rebuild it from `js/` when the loader changes:
 
 ```bash
-cd cmake-build-debug/examples
-./logo
-```
-
-### Native dependencies
-
-- OpenGL
-- GLFW
-- GLEW
-- libpng + zlib
-
-## Web (Emscripten)
-
-Use the Emscripten toolchain preset (e.g. `cmake-build-emscripten`):
-
-```bash
-cmake --build cmake-build-emscripten --target msdf_example
-```
-
-Output per example:
-
-```
-cmake-build-emscripten/game-dev/fgfx/examples/<name>/
-  index.html
-  <name>.js
-  runtime-js-compiled.js
-  assets/
-```
-
-Serve the output directory:
-
-```bash
-cd cmake-build-emscripten/game-dev/fgfx/examples/msdf_example
-python -m http.server 8080
-```
-
-## JavaScript runtime bundle
-
-Web examples require `runtime-js-compiled.js` in the fgfx source tree. It is gitignored and must be built before wasm POST_BUILD copy steps:
-
-```bash
-cd game-dev/fgfx/js
-npm install
+cd js
+npm ci
 npm run build
 ```
 
-This produces `game-dev/fgfx/runtime-js-compiled.js` from `js/runtime.js`, `TextureManager.js`, etc.
-
-## Deprecated: compile.sh
-
-`compile.sh` in this directory (`cmake . && make`) is **deprecated**. Use root CMake builds as described above.
+That writes `runtime-js-compiled.js` at the repository root. This package is not published to npm. This repository does not link the wasm executable. The host does.

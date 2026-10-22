@@ -23,7 +23,7 @@
 
 #endif
 
-namespace fgfx {
+namespace render {
 
   class RenderBackend;
   class UniformAllocator;

@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace fgfx {
+namespace render {
 
 inline unsigned nextUtf8(const std::string& text, int& i) {
   if (i < 0 || i >= static_cast<int>(text.size())) {
@@ -81,6 +81,6 @@ inline std::string utf8Upper(const char* text) {
   return out;
 }
 
-} // namespace fgfx
+} // namespace render
 
 #endif

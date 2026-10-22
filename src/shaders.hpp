@@ -12,7 +12,7 @@
 #define _NOEXCEPT _GLIBCXX_USE_NOEXCEPT _GLIBCXX_TXN_SAFE_DYN
 #endif
 
-namespace fgfx {
+namespace render {
 
   class ShaderException : public std::exception {
   public:

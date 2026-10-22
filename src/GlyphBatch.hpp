@@ -9,7 +9,7 @@
 #include <vector>
 #include <memory>
 
-namespace fgfx {
+namespace render {
 
 class Engine;
 struct FrameContext;
@@ -61,6 +61,6 @@ class GlyphBatch {
   void bufferPoint(glm::vec3 pos, glm::vec4 color, glm::vec2 coord, Buffer& buf);
 };
 
-}  // namespace fgfx
+}  // namespace render
 
 #endif

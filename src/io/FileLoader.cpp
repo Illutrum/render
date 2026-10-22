@@ -13,7 +13,7 @@
 #include "concurrentqueue.h"
 #endif
 
-namespace fgfx {
+namespace render {
 namespace io {
 
 #ifdef ANDROID

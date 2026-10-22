@@ -9,7 +9,7 @@
 #include <vector>
 #include <string>
 
-namespace fgfx {
+namespace render {
 
   struct ShaderBindingRequest {
     std::vector<std::string> attribNames;
