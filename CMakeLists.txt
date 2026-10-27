@@ -3,16 +3,16 @@ project(render LANGUAGES CXX)
 
 include(FetchContent)
 
-FetchContent_Declare(rpc_cpp
-  GIT_REPOSITORY https://github.com/Daemonarium/rpc-cpp.git
-  GIT_TAG v0.1.0
-  GIT_SHALLOW TRUE
-)
-FetchContent_GetProperties(rpc_cpp)
-if(NOT rpc_cpp_POPULATED)
-  FetchContent_Populate(rpc_cpp)
-endif()
 if(NOT TARGET rpc_cpp)
+  FetchContent_Declare(rpc_cpp
+    GIT_REPOSITORY https://github.com/Daemonarium/rpc-cpp.git
+    GIT_TAG v0.1.0
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_GetProperties(rpc_cpp)
+  if(NOT rpc_cpp_POPULATED)
+    FetchContent_Populate(rpc_cpp)
+  endif()
   add_library(rpc_cpp INTERFACE)
   target_include_directories(rpc_cpp INTERFACE ${rpc_cpp_SOURCE_DIR}/src)
 endif()
