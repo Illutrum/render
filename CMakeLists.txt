@@ -6,7 +6,7 @@ include(FetchContent)
 if(NOT TARGET rpc_cpp)
   FetchContent_Declare(rpc_cpp
     GIT_REPOSITORY https://github.com/Daemonarium/rpc-cpp.git
-    GIT_TAG v0.1.0
+    GIT_TAG v0.2.0
     GIT_SHALLOW TRUE
   )
   FetchContent_GetProperties(rpc_cpp)
